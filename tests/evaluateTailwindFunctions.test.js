@@ -653,6 +653,33 @@ test('font-family values are retrieved without font-feature-settings', () => {
   })
 })
 
+test('font-feature-settings values can be retrieved', () => {
+  let input = css`
+    .heading {
+      font-family: theme('fontFamily.sans');
+      font-feature-settings: theme('fontFamily.sans[1].fontFeatureSettings');
+    }
+  `
+
+  let output = css`
+    .heading {
+      font-family: Inter;
+      font-feature-settings: 'cv11';
+    }
+  `
+
+  return run(input, {
+    theme: {
+      fontFamily: {
+        sans: ['Inter', { fontFeatureSettings: "'cv11'" }],
+      },
+    },
+  }).then((result) => {
+    expect(result.css).toMatchCss(output)
+    expect(result.warnings().length).toBe(0)
+  })
+})
+
 test('box-shadow values are joined when an array', () => {
   let input = css`
     .element {
@@ -1268,8 +1295,11 @@ describe('context dependent', () => {
     `)
 
     // 2. But we get a warning in the console
-    expect(warn).toHaveBeenCalledTimes(1)
-    expect(warn.mock.calls.map((x) => x[0])).toEqual(['invalid-theme-key-in-class'])
+    expect(warn).toHaveBeenCalledTimes(2)
+    expect(warn.mock.calls.map((x) => x[0])).toEqual([
+      'invalid-theme-key-in-class',
+      'invalid-theme-key-in-class',
+    ])
 
     // 3. The second run should work fine because it's been removed from the class cache
     result = await runFull('@tailwind utilities', configPath)
@@ -1281,7 +1311,10 @@ describe('context dependent', () => {
     `)
 
     // 4. But we've not received any further logs about it
-    expect(warn).toHaveBeenCalledTimes(1)
-    expect(warn.mock.calls.map((x) => x[0])).toEqual(['invalid-theme-key-in-class'])
+    expect(warn).toHaveBeenCalledTimes(2)
+    expect(warn.mock.calls.map((x) => x[0])).toEqual([
+      'invalid-theme-key-in-class',
+      'invalid-theme-key-in-class',
+    ])
   })
 })

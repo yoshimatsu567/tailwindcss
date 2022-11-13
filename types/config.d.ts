@@ -12,7 +12,7 @@ interface RecursiveKeyValuePair<K extends keyof any = string, V = string> {
   [key: string]: V | RecursiveKeyValuePair<K, V>
 }
 type ResolvableTo<T> = T | ((utils: PluginUtils) => T)
-type CSSRuleObject = RecursiveKeyValuePair<string, string | string[]>
+type CSSRuleObject = RecursiveKeyValuePair<string, null | string | string[]>
 
 interface PluginUtils {
   colors: DefaultColors
@@ -84,6 +84,7 @@ type ScreensConfig = string[] | KeyValuePair<string, string | Screen | Screen[]>
 interface ThemeConfig {
   // Responsiveness
   screens: ResolvableTo<ScreensConfig>
+  supports: ResolvableTo<Record<string, string>>
 
   // Reusable base configs
   colors: ResolvableTo<RecursiveKeyValuePair>
@@ -263,13 +264,17 @@ export interface PluginAPI {
     }>
   ): void
   // for registering new dynamic utility styles
-  matchUtilities<T>(
-    utilities: KeyValuePair<string, (value: T) => CSSRuleObject>,
+  matchUtilities<T = string, U = string>(
+    utilities: KeyValuePair<
+      string,
+      (value: T | string, extra: { modifier: U | string | null }) => CSSRuleObject | null
+    >,
     options?: Partial<{
       respectPrefix: boolean
       respectImportant: boolean
       type: ValueType | ValueType[]
       values: KeyValuePair<string, T>
+      modifiers: 'any' | KeyValuePair<string, U>
       supportsNegativeValues: boolean
     }>
   ): void
@@ -282,13 +287,17 @@ export interface PluginAPI {
     }>
   ): void
   // for registering new dynamic component styles
-  matchComponents<T>(
-    components: KeyValuePair<string, (value: T) => CSSRuleObject>,
+  matchComponents<T = string, U = string>(
+    components: KeyValuePair<
+      string,
+      (value: T | string, extra: { modifier: U | string | null }) => CSSRuleObject | null
+    >,
     options?: Partial<{
       respectPrefix: boolean
       respectImportant: boolean
       type: ValueType | ValueType[]
       values: KeyValuePair<string, T>
+      modifiers: 'any' | KeyValuePair<string, U>
       supportsNegativeValues: boolean
     }>
   ): void
@@ -296,7 +305,17 @@ export interface PluginAPI {
   addBase(base: CSSRuleObject | CSSRuleObject[]): void
   // for registering custom variants
   addVariant(name: string, definition: string | string[] | (() => string) | (() => string)[]): void
-  matchVariant(name: string, cb: (options: { value: string }) => string | string[]): void
+  matchVariant<T = string>(
+    name: string,
+    cb: (value: T | string, extra: { modifier: string | null }) => string | string[],
+    options?: {
+      values?: KeyValuePair<string, T>
+      sort?(
+        a: { value: T | string; modifier: string | null },
+        b: { value: T | string; modifier: string | null }
+      ): number
+    }
+  ): void
   // for looking up values in the user’s theme configuration
   theme: <TDefaultValue = Config['theme']>(
     path?: string,
@@ -312,8 +331,11 @@ export interface PluginAPI {
 export type PluginCreator = (api: PluginAPI) => void
 export type PluginsConfig = (
   | PluginCreator
-  | { handler: PluginCreator; config?: Config }
-  | { (options: any): { handler: PluginCreator; config?: Config }; __isOptionsFunction: true }
+  | { handler: PluginCreator; config?: Partial<Config> }
+  | {
+      (options: any): { handler: PluginCreator; config?: Partial<Config> }
+      __isOptionsFunction: true
+    }
 )[]
 
 // Top level config related

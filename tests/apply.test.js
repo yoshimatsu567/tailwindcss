@@ -1601,6 +1601,9 @@ it('can apply joined classes when using elements', async () => {
     header:nth-of-type(odd) {
       @apply foo;
     }
+    header::after {
+      @apply foo;
+    }
     main {
       @apply foo bar;
     }
@@ -1618,7 +1621,13 @@ it('can apply joined classes when using elements', async () => {
     .bar.foo {
       color: green;
     }
+    header:nth-of-type(odd).bar {
+      color: red;
+    }
     header.bar:nth-of-type(odd) {
+      color: green;
+    }
+    header.bar::after {
       color: red;
       color: green;
     }
@@ -1690,4 +1699,48 @@ it('should not replace multiple instances of the same class in a single selector
       color: fuchsia;
     }
   `)
+})
+
+it('should maintain the correct selector when applying other utilities', () => {
+  let config = {
+    content: [
+      {
+        raw: html`
+          <div>
+            <div class="check"></div>
+          </div>
+        `,
+      },
+    ],
+  }
+
+  let input = css`
+    @tailwind utilities;
+
+    .foo:hover.bar .baz {
+      @apply bg-black;
+      color: red;
+    }
+
+    .foo:hover.bar > .baz {
+      @apply bg-black;
+      color: red;
+    }
+  `
+
+  return run(input, config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      .foo:hover.bar .baz {
+        --tw-bg-opacity: 1;
+        background-color: rgb(0 0 0 / var(--tw-bg-opacity));
+        color: red;
+      }
+
+      .foo:hover.bar > .baz {
+        --tw-bg-opacity: 1;
+        background-color: rgb(0 0 0 / var(--tw-bg-opacity));
+        color: red;
+      }
+    `)
+  })
 })

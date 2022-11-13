@@ -11,6 +11,7 @@ module.exports = {
       xl: '1280px',
       '2xl': '1536px',
     },
+    supports: {},
     colors: ({ colors }) => ({
       inherit: colors.inherit,
       current: colors.current,
@@ -111,6 +112,16 @@ module.exports = {
       ping: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
       pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       bounce: 'bounce 1s infinite',
+    },
+    aria: {
+      checked: 'checked="true"',
+      disabled: 'disabled="true"',
+      expanded: 'expanded="true"',
+      hidden: 'hidden="true"',
+      pressed: 'pressed="true"',
+      readonly: 'readonly="true"',
+      required: 'required="true"',
+      selected: 'selected="true"',
     },
     aspectRatio: {
       auto: 'auto',
@@ -285,8 +296,8 @@ module.exports = {
       none: '0 0 #0000',
     },
     fill: ({ theme }) => ({
-      ...theme('colors'),
       none: 'none',
+      ...theme('colors'),
     }),
     grayscale: {
       0: '0',
@@ -797,8 +808,8 @@ module.exports = {
       ...theme('spacing'),
     }),
     stroke: ({ theme }) => ({
-      ...theme('colors'),
       none: 'none',
+      ...theme('colors'),
     }),
     strokeWidth: {
       0: '0',

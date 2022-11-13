@@ -615,3 +615,451 @@ test('classes in the same arbitrary variant should not be prefixed', () => {
     `)
   })
 })
+
+it('should support aria variants', () => {
+  let config = {
+    content: [
+      {
+        raw: html`
+          <div>
+            <div class="aria-checked:underline"></div>
+            <div class="aria-[sort=ascending]:underline"></div>
+            <div class="aria-[labelledby=a_b]:underline"></div>
+            <div class="group-aria-checked:underline"></div>
+            <div class="peer-aria-checked:underline"></div>
+            <div class="group-aria-checked/foo:underline"></div>
+            <div class="peer-aria-checked/foo:underline"></div>
+            <div class="group-aria-[sort=ascending]:underline"></div>
+            <div class="peer-aria-[sort=ascending]:underline"></div>
+            <div class="group-aria-[labelledby=a_b]:underline"></div>
+            <div class="peer-aria-[labelledby=a_b]:underline"></div>
+            <div class="group-aria-[sort=ascending]/foo:underline"></div>
+            <div class="peer-aria-[sort=ascending]/foo:underline"></div>
+          </div>
+        `,
+      },
+    ],
+    corePlugins: { preflight: false },
+  }
+
+  let input = css`
+    @tailwind utilities;
+  `
+
+  return run(input, config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      .aria-checked\:underline[aria-checked='true'] {
+        text-decoration-line: underline;
+      }
+      .aria-\[sort\=ascending\]\:underline[aria-sort='ascending'] {
+        text-decoration-line: underline;
+      }
+      .aria-\[labelledby\=a_b\]\:underline[aria-labelledby='a b'] {
+        text-decoration-line: underline;
+      }
+      .group[aria-checked='true'] .group-aria-checked\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo[aria-checked='true'] .group-aria-checked\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .group[aria-sort='ascending'] .group-aria-\[sort\=ascending\]\:underline {
+        text-decoration-line: underline;
+      }
+      .group[aria-labelledby='a b'] .group-aria-\[labelledby\=a_b\]\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo[aria-sort='ascending'] .group-aria-\[sort\=ascending\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .peer[aria-checked='true'] ~ .peer-aria-checked\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo[aria-checked='true'] ~ .peer-aria-checked\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .peer[aria-sort='ascending'] ~ .peer-aria-\[sort\=ascending\]\:underline {
+        text-decoration-line: underline;
+      }
+      .peer[aria-labelledby='a b'] ~ .peer-aria-\[labelledby\=a_b\]\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo[aria-sort='ascending'] ~ .peer-aria-\[sort\=ascending\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+    `)
+  })
+})
+
+it('should support data variants', () => {
+  let config = {
+    theme: {
+      data: {
+        checked: 'ui~="checked"',
+      },
+    },
+    content: [
+      {
+        raw: html`
+          <div>
+            <div class="data-checked:underline"></div>
+            <div class="data-[position=top]:underline"></div>
+            <div class="data-[foo=bar_baz]:underline"></div>
+            <div class="group-data-checked:underline"></div>
+            <div class="peer-data-checked:underline"></div>
+            <div class="group-data-checked/foo:underline"></div>
+            <div class="peer-data-checked/foo:underline"></div>
+            <div class="group-data-[position=top]:underline"></div>
+            <div class="peer-data-[position=top]:underline"></div>
+            <div class="group-data-[foo=bar_baz]:underline"></div>
+            <div class="peer-data-[foo=bar_baz]:underline"></div>
+            <div class="group-data-[position=top]/foo:underline"></div>
+            <div class="peer-data-[position=top]/foo:underline"></div>
+          </div>
+        `,
+      },
+    ],
+    corePlugins: { preflight: false },
+  }
+
+  let input = css`
+    @tailwind utilities;
+  `
+
+  return run(input, config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      .data-checked\:underline[data-ui~='checked'] {
+        text-decoration-line: underline;
+      }
+      .data-\[position\=top\]\:underline[data-position='top'] {
+        text-decoration-line: underline;
+      }
+      .data-\[foo\=bar_baz\]\:underline[data-foo='bar baz'] {
+        text-decoration-line: underline;
+      }
+      .group[data-ui~='checked'] .group-data-checked\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo[data-ui~='checked'] .group-data-checked\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .group[data-position='top'] .group-data-\[position\=top\]\:underline {
+        text-decoration-line: underline;
+      }
+      .group[data-foo='bar baz'] .group-data-\[foo\=bar_baz\]\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo[data-position='top'] .group-data-\[position\=top\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .peer[data-ui~='checked'] ~ .peer-data-checked\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo[data-ui~='checked'] ~ .peer-data-checked\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .peer[data-position='top'] ~ .peer-data-\[position\=top\]\:underline {
+        text-decoration-line: underline;
+      }
+      .peer[data-foo='bar baz'] ~ .peer-data-\[foo\=bar_baz\]\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo[data-position='top'] ~ .peer-data-\[position\=top\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+    `)
+  })
+})
+
+it('should support supports', () => {
+  let config = {
+    theme: {
+      supports: {
+        grid: 'display: grid',
+      },
+    },
+    content: [
+      {
+        raw: html`
+          <div>
+            <!-- Property check -->
+            <div class="supports-[display:grid]:grid"></div>
+            <!-- Value with spaces, needs to be normalized -->
+            <div class="supports-[transform-origin:5%_5%]:underline"></div>
+            <!-- Selectors (raw) -->
+            <div class="supports-[selector(A>B)]:underline"></div>
+            <!-- 'not' check (raw) -->
+            <div class="supports-[not(foo:bar)]:underline"></div>
+            <!-- 'or' check (raw) -->
+            <div class="supports-[(foo:bar)or(bar:baz)]:underline"></div>
+            <!-- 'and' check (raw) -->
+            <div class="supports-[(foo:bar)and(bar:baz)]:underline"></div>
+            <!-- No value give for the property, defaulting to prop: var(--tw) -->
+            <div class="supports-[container-type]:underline"></div>
+            <!-- Named supports usage -->
+            <div class="supports-grid:underline"></div>
+          </div>
+        `,
+      },
+    ],
+    corePlugins: { preflight: false },
+  }
+
+  let input = css`
+    @tailwind utilities;
+  `
+
+  return run(input, config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      @supports (display: grid) {
+        .supports-grid\:underline {
+          text-decoration-line: underline;
+        }
+      }
+
+      @supports (display: grid) {
+        .supports-\[display\:grid\]\:grid {
+          display: grid;
+        }
+      }
+
+      @supports (transform-origin: 5% 5%) {
+        .supports-\[transform-origin\:5\%_5\%\]\:underline {
+          text-decoration-line: underline;
+        }
+      }
+
+      @supports selector(A > B) {
+        .supports-\[selector\(A\>B\)\]\:underline {
+          text-decoration-line: underline;
+        }
+      }
+
+      @supports not (foo: bar) {
+        .supports-\[not\(foo\:bar\)\]\:underline {
+          text-decoration-line: underline;
+        }
+      }
+
+      @supports (foo: bar) or (bar: baz) {
+        .supports-\[\(foo\:bar\)or\(bar\:baz\)\]\:underline {
+          text-decoration-line: underline;
+        }
+      }
+
+      @supports (foo: bar) and (bar: baz) {
+        .supports-\[\(foo\:bar\)and\(bar\:baz\)\]\:underline {
+          text-decoration-line: underline;
+        }
+      }
+
+      @supports (container-type: var(--tw)) {
+        .supports-\[container-type\]\:underline {
+          text-decoration-line: underline;
+        }
+      }
+    `)
+  })
+})
+
+it('should be possible to use modifiers and arbitrary groups', () => {
+  let config = {
+    content: [
+      {
+        raw: html`
+          <div>
+            <div class="group">
+              <!-- Default group usage -->
+              <div class="group-hover:underline"></div>
+
+              <!-- Arbitrary variants with pseudo class for group -->
+              <!-- With & -->
+              <div class="group-[&:focus]:underline"></div>
+              <!-- Without & -->
+              <div class="group-[:hover]:underline"></div>
+
+              <!-- Arbitrary variants with attributes selectors for group -->
+              <!-- With & -->
+              <div class="group-[&[data-open]]:underline"></div>
+              <!-- Without & -->
+              <div class="group-[[data-open]]:underline"></div>
+
+              <!-- Arbitrary variants with other selectors -->
+              <!-- With & -->
+              <div class="group-[.in-foo_&]:underline"></div>
+              <!-- Without & -->
+              <div class="group-[.in-foo]:underline"></div>
+            </div>
+
+            <!-- The same as above, but with modifiers -->
+            <div class="group/foo">
+              <div class="group-hover/foo:underline"></div>
+
+              <div class="group-[&:focus]/foo:underline"></div>
+              <div class="group-[:hover]/foo:underline"></div>
+
+              <div class="group-[&[data-open]]/foo:underline"></div>
+              <div class="group-[[data-open]]/foo:underline"></div>
+
+              <div class="group-[.in-foo_&]/foo:underline"></div>
+              <div class="group-[.in-foo]/foo:underline"></div>
+            </div>
+          </div>
+        `,
+      },
+    ],
+    corePlugins: { preflight: false },
+  }
+
+  let input = css`
+    @tailwind utilities;
+  `
+
+  return run(input, config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      .group:hover .group-hover\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo:hover .group-hover\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .group:focus .group-\[\&\:focus\]\:underline {
+        text-decoration-line: underline;
+      }
+      .group:hover .group-\[\:hover\]\:underline {
+        text-decoration-line: underline;
+      }
+      .group[data-open] .group-\[\&\[data-open\]\]\:underline {
+        text-decoration-line: underline;
+      }
+      .group[data-open] .group-\[\[data-open\]\]\:underline {
+        text-decoration-line: underline;
+      }
+      .in-foo .group .group-\[\.in-foo_\&\]\:underline {
+        text-decoration-line: underline;
+      }
+      .group.in-foo .group-\[\.in-foo\]\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo:focus .group-\[\&\:focus\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo:hover .group-\[\:hover\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo[data-open] .group-\[\&\[data-open\]\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo[data-open] .group-\[\[data-open\]\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .in-foo .group\/foo .group-\[\.in-foo_\&\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .group\/foo.in-foo .group-\[\.in-foo\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+    `)
+  })
+})
+
+it('should be possible to use modifiers and arbitrary peers', () => {
+  let config = {
+    content: [
+      {
+        raw: html`
+          <div>
+            <div class="peer"></div>
+
+            <!-- Default peer usage -->
+            <div class="peer-hover:underline"></div>
+
+            <!-- Arbitrary variants with pseudo class for peer -->
+            <!-- With & -->
+            <div class="peer-[&:focus]:underline"></div>
+            <!-- Without & -->
+            <div class="peer-[:hover]:underline"></div>
+
+            <!-- Arbitrary variants with attributes selectors for peer -->
+            <!-- With & -->
+            <div class="peer-[&[data-open]]:underline"></div>
+            <!-- Without & -->
+            <div class="peer-[[data-open]]:underline"></div>
+
+            <!-- Arbitrary variants with other selectors -->
+            <!-- With & -->
+            <div class="peer-[.in-foo_&]:underline"></div>
+            <!-- Without & -->
+            <div class="peer-[.in-foo]:underline"></div>
+
+            <!-- The same as above, but with modifiers -->
+            <div class="peer/foo"></div>
+
+            <div class="peer-hover/foo:underline"></div>
+
+            <div class="peer-[&:focus]/foo:underline"></div>
+            <div class="peer-[:hover]/foo:underline"></div>
+
+            <div class="peer-[&[data-open]]/foo:underline"></div>
+            <div class="peer-[[data-open]]/foo:underline"></div>
+
+            <div class="peer-[.in-foo_&]/foo:underline"></div>
+            <div class="peer-[.in-foo]/foo:underline"></div>
+          </div>
+        `,
+      },
+    ],
+    corePlugins: { preflight: false },
+  }
+
+  let input = css`
+    @tailwind utilities;
+  `
+
+  return run(input, config).then((result) => {
+    expect(result.css).toMatchFormattedCss(css`
+      .peer:hover ~ .peer-hover\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo:hover ~ .peer-hover\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .peer:focus ~ .peer-\[\&\:focus\]\:underline {
+        text-decoration-line: underline;
+      }
+      .peer:hover ~ .peer-\[\:hover\]\:underline {
+        text-decoration-line: underline;
+      }
+      .peer[data-open] ~ .peer-\[\&\[data-open\]\]\:underline {
+        text-decoration-line: underline;
+      }
+      .peer[data-open] ~ .peer-\[\[data-open\]\]\:underline {
+        text-decoration-line: underline;
+      }
+      .in-foo .peer ~ .peer-\[\.in-foo_\&\]\:underline {
+        text-decoration-line: underline;
+      }
+      .peer.in-foo ~ .peer-\[\.in-foo\]\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo:focus ~ .peer-\[\&\:focus\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo:hover ~ .peer-\[\:hover\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo[data-open] ~ .peer-\[\&\[data-open\]\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo[data-open] ~ .peer-\[\[data-open\]\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .in-foo .peer\/foo ~ .peer-\[\.in-foo_\&\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+      .peer\/foo.in-foo ~ .peer-\[\.in-foo\]\/foo\:underline {
+        text-decoration-line: underline;
+      }
+    `)
+  })
+})

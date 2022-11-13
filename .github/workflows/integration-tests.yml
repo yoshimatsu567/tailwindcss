@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CI: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -28,33 +31,32 @@ jobs:
         node-version: [16]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-
-      - name: Use cached node_modules (tailwindcss)
-        id: cache-tailwindcss
-        uses: actions/cache@v2
-        with:
-          path: node_modules
-          key: nodeModules-${{ hashFiles('./package-lock.json') }}-${{ matrix.node-version }}-tailwindcss
-          restore-keys: |
-            nodeModules-
+      #     cache: 'npm'
+      #
+      # - name: Use cached node_modules (tailwindcss)
+      #   id: cache-tailwindcss
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: node_modules
+      #     key: nodeModules-${{ hashFiles('./package-lock.json') }}-${{ matrix.node-version }}-tailwindcss
+      #     restore-keys: |
+      #       nodeModules-
 
       - name: Install dependencies
-        if: steps.cache-tailwindcss.outputs.cache-hit != 'true'
+        # if: steps.cache-tailwindcss.outputs.cache-hit != 'true'
         run: npm install
-        env:
-          CI: true
 
       - name: Build Tailwind CSS
         run: npm run prepublishOnly
 
       - name: Use cached node_modules (integrations)
         id: cache-integrations
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ./integrations/**/node_modules
           key: nodeModules-${{ hashFiles('./integrations/**/package-lock.json') }}-${{ matrix.node-version }}-${{ matrix.integration }}-integrations
@@ -64,8 +66,6 @@ jobs:
       - name: Install shared dependencies
         if: steps.cache-integrations.outputs.cache-hit != 'true'
         run: npm run install:integrations
-        env:
-          CI: true
 
       - name: Test ${{ matrix.integration }}
         run: npm test --prefix ./integrations/${{ matrix.integration }}

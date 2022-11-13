@@ -4,7 +4,6 @@ import postcss from 'postcss'
 import dlv from 'dlv'
 import selectorParser from 'postcss-selector-parser'
 
-import { flagEnabled } from '../featureFlags.js'
 import transformThemeValue from '../util/transformThemeValue'
 import parseObjectStyles from '../util/parseObjectStyles'
 import prefixSelector from '../util/prefixSelector'
@@ -19,15 +18,39 @@ import { toPath } from '../util/toPath'
 import log from '../util/log'
 import negateValue from '../util/negateValue'
 import isValidArbitraryValue from '../util/isValidArbitraryValue'
-import { generateRules } from './generateRules'
+import { generateRules, getClassNameFromSelector } from './generateRules'
 import { hasContentChanged } from './cacheInvalidation.js'
 import { Offsets } from './offsets.js'
+import { flagEnabled } from '../featureFlags.js'
+import { finalizeSelector, formatVariantSelector } from '../util/formatVariantSelector'
 
-let MATCH_VARIANT = Symbol()
+const VARIANT_TYPES = {
+  AddVariant: Symbol.for('ADD_VARIANT'),
+  MatchVariant: Symbol.for('MATCH_VARIANT'),
+}
+
+const VARIANT_INFO = {
+  Base: 1 << 0,
+  Dynamic: 1 << 1,
+}
 
 function prefix(context, selector) {
   let prefix = context.tailwindConfig.prefix
   return typeof prefix === 'function' ? prefix(selector) : prefix + selector
+}
+
+function normalizeOptionTypes({ type = 'any', ...options }) {
+  let types = [].concat(type)
+
+  return {
+    ...options,
+    types: types.map((type) => {
+      if (Array.isArray(type)) {
+        return { type: type[0], ...type[1] }
+      }
+      return { type, preferOnConflict: false }
+    }),
+  }
 }
 
 function parseVariantFormatString(input) {
@@ -242,6 +265,7 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
     }
   )
 
+  let variantIdentifier = 0
   let api = {
     postcss,
     prefix: applyConfiguredPrefix,
@@ -344,9 +368,10 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
       let defaultOptions = {
         respectPrefix: true,
         respectImportant: true,
+        modifiers: false,
       }
 
-      options = { ...defaultOptions, ...options }
+      options = normalizeOptionTypes({ ...defaultOptions, ...options })
 
       let offset = offsets.create('utilities')
 
@@ -357,24 +382,51 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
         classList.add([prefixedIdentifier, options])
 
         function wrapped(modifier, { isOnlyPlugin }) {
-          let { type = 'any' } = options
-          type = [].concat(type)
-          let [value, coercedType] = coerceValue(type, modifier, options, tailwindConfig)
+          let [value, coercedType, utilityModifier] = coerceValue(
+            options.types,
+            modifier,
+            options,
+            tailwindConfig
+          )
 
           if (value === undefined) {
             return []
           }
 
-          if (!type.includes(coercedType) && !isOnlyPlugin) {
-            return []
+          if (!options.types.some(({ type }) => type === coercedType)) {
+            if (isOnlyPlugin) {
+              log.warn([
+                `Unnecessary typehint \`${coercedType}\` in \`${identifier}-${modifier}\`.`,
+                `You can safely update it to \`${identifier}-${modifier.replace(
+                  coercedType + ':',
+                  ''
+                )}\`.`,
+              ])
+            } else {
+              return []
+            }
           }
 
           if (!isValidArbitraryValue(value)) {
             return []
           }
 
+          let extras = {
+            get modifier() {
+              if (!options.modifiers) {
+                log.warn(`modifier-used-without-options-for-${identifier}`, [
+                  'Your plugin must set `modifiers: true` in its options to support modifiers.',
+                ])
+              }
+
+              return utilityModifier
+            },
+          }
+
+          let modifiersEnabled = flagEnabled(tailwindConfig, 'generalizedModifiers')
+
           let ruleSets = []
-            .concat(rule(value))
+            .concat(modifiersEnabled ? rule(value, extras) : rule(value))
             .filter(Boolean)
             .map((declaration) => ({
               [nameClass(identifier, modifier)]: declaration,
@@ -396,9 +448,10 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
       let defaultOptions = {
         respectPrefix: true,
         respectImportant: false,
+        modifiers: false,
       }
 
-      options = { ...defaultOptions, ...options }
+      options = normalizeOptionTypes({ ...defaultOptions, ...options })
 
       let offset = offsets.create('components')
 
@@ -409,15 +462,18 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
         classList.add([prefixedIdentifier, options])
 
         function wrapped(modifier, { isOnlyPlugin }) {
-          let { type = 'any' } = options
-          type = [].concat(type)
-          let [value, coercedType] = coerceValue(type, modifier, options, tailwindConfig)
+          let [value, coercedType, utilityModifier] = coerceValue(
+            options.types,
+            modifier,
+            options,
+            tailwindConfig
+          )
 
           if (value === undefined) {
             return []
           }
 
-          if (!type.includes(coercedType)) {
+          if (!options.types.some(({ type }) => type === coercedType)) {
             if (isOnlyPlugin) {
               log.warn([
                 `Unnecessary typehint \`${coercedType}\` in \`${identifier}-${modifier}\`.`,
@@ -435,8 +491,22 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
             return []
           }
 
+          let extras = {
+            get modifier() {
+              if (!options.modifiers) {
+                log.warn(`modifier-used-without-options-for-${identifier}`, [
+                  'Your plugin must set `modifiers: true` in its options to support modifiers.',
+                ])
+              }
+
+              return utilityModifier
+            },
+          }
+
+          let modifiersEnabled = flagEnabled(tailwindConfig, 'generalizedModifiers')
+
           let ruleSets = []
-            .concat(rule(value))
+            .concat(modifiersEnabled ? rule(value, extras) : rule(value))
             .filter(Boolean)
             .map((declaration) => ({
               [nameClass(identifier, modifier)]: declaration,
@@ -458,12 +528,12 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
       variantFunctions = [].concat(variantFunctions).map((variantFunction) => {
         if (typeof variantFunction !== 'string') {
           // Safelist public API functions
-          return (api) => {
+          return (api = {}) => {
             let { args, modifySelectors, container, separator, wrap, format } = api
             let result = variantFunction(
               Object.assign(
                 { modifySelectors, container, separator },
-                variantFunction[MATCH_VARIANT] && { args, wrap, format }
+                options.type === VARIANT_TYPES.MatchVariant && { args, wrap, format }
               )
             )
 
@@ -496,21 +566,64 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
 
       insertInto(variantList, variantName, options)
       variantMap.set(variantName, variantFunctions)
+      context.variantOptions.set(variantName, options)
     },
-  }
+    matchVariant(variant, variantFn, options) {
+      // A unique identifier that "groups" these variants together.
+      // This is for internal use only which is why it is not present in the types
+      let id = options?.id ?? ++variantIdentifier
+      let isSpecial = variant === '@'
 
-  if (flagEnabled(tailwindConfig, 'matchVariant')) {
-    api.matchVariant = function (variant, variantFn, options) {
+      let modifiersEnabled = flagEnabled(tailwindConfig, 'generalizedModifiers')
+
       for (let [key, value] of Object.entries(options?.values ?? {})) {
-        api.addVariant(`${variant}-${key}`, variantFn({ value }))
+        if (key === 'DEFAULT') continue
+
+        api.addVariant(
+          isSpecial ? `${variant}${key}` : `${variant}-${key}`,
+          ({ args, container }) => {
+            return variantFn(
+              value,
+              modifiersEnabled ? { modifier: args?.modifier, container } : { container }
+            )
+          },
+
+          {
+            ...options,
+            value,
+            id,
+            type: VARIANT_TYPES.MatchVariant,
+            variantInfo: VARIANT_INFO.Base,
+          }
+        )
       }
+
+      let hasDefault = 'DEFAULT' in (options?.values ?? {})
 
       api.addVariant(
         variant,
-        Object.assign(({ args }) => variantFn({ value: args }), { [MATCH_VARIANT]: true }),
-        options
+        ({ args, container }) => {
+          if (args?.value === sharedState.NONE && !hasDefault) {
+            return null
+          }
+
+          return variantFn(
+            args?.value === sharedState.NONE
+              ? options.values.DEFAULT
+              : // Falling back to args if it is a string, otherwise '' for older intellisense
+                // (JetBrains) plugins.
+                args?.value ?? (typeof args === 'string' ? args : ''),
+            modifiersEnabled ? { modifier: args?.modifier, container } : { container }
+          )
+        },
+        {
+          ...options,
+          id,
+          type: VARIANT_TYPES.MatchVariant,
+          variantInfo: VARIANT_INFO.Dynamic,
+        }
       )
-    }
+    },
   }
 
   return api
@@ -629,8 +742,11 @@ function resolvePlugins(context, root) {
   let beforeVariants = [
     variantPlugins['pseudoElementVariants'],
     variantPlugins['pseudoClassVariants'],
+    variantPlugins['ariaVariants'],
+    variantPlugins['dataVariants'],
   ]
   let afterVariants = [
+    variantPlugins['supportsVariants'],
     variantPlugins['directionVariants'],
     variantPlugins['reducedMotionVariants'],
     variantPlugins['prefersContrastVariants'],
@@ -709,6 +825,7 @@ function registerPlugins(plugins, context) {
     if (checks.length > 0) {
       let patternMatchingCount = new Map()
       let prefixLength = context.tailwindConfig.prefix.length
+      let checkImportantUtils = checks.some((check) => check.pattern.source.includes('!'))
 
       for (let util of classList) {
         let utils = Array.isArray(util)
@@ -734,7 +851,7 @@ function registerPlugins(plugins, context) {
                 ]
               }
 
-              if ([].concat(options?.type).includes('color')) {
+              if (options.types.some(({ type }) => type === 'color')) {
                 classes = [
                   ...classes,
                   ...classes.flatMap((cls) =>
@@ -743,6 +860,10 @@ function registerPlugins(plugins, context) {
                     )
                   ),
                 ]
+              }
+
+              if (checkImportantUtils && options?.respectImportant) {
+                classes = [...classes, ...classes.map((cls) => '!' + cls)]
               }
 
               return classes
@@ -857,6 +978,138 @@ function registerPlugins(plugins, context) {
 
     return output
   }
+
+  // Generate a list of available variants with meta information of the type of variant.
+  context.getVariants = function getVariants() {
+    let result = []
+    for (let [name, options] of context.variantOptions.entries()) {
+      if (options.variantInfo === VARIANT_INFO.Base) continue
+
+      result.push({
+        name,
+        isArbitrary: options.type === Symbol.for('MATCH_VARIANT'),
+        values: Object.keys(options.values ?? {}),
+        hasDash: name !== '@',
+        selectors({ modifier, value } = {}) {
+          let candidate = '__TAILWIND_PLACEHOLDER__'
+
+          let rule = postcss.rule({ selector: `.${candidate}` })
+          let container = postcss.root({ nodes: [rule.clone()] })
+
+          let before = container.toString()
+
+          let fns = (context.variantMap.get(name) ?? []).flatMap(([_, fn]) => fn)
+          let formatStrings = []
+          for (let fn of fns) {
+            let localFormatStrings = []
+
+            let api = {
+              args: { modifier, value: options.values?.[value] ?? value },
+              separator: context.tailwindConfig.separator,
+              modifySelectors(modifierFunction) {
+                // Run the modifierFunction over each rule
+                container.each((rule) => {
+                  if (rule.type !== 'rule') {
+                    return
+                  }
+
+                  rule.selectors = rule.selectors.map((selector) => {
+                    return modifierFunction({
+                      get className() {
+                        return getClassNameFromSelector(selector)
+                      },
+                      selector,
+                    })
+                  })
+                })
+
+                return container
+              },
+              format(str) {
+                localFormatStrings.push(str)
+              },
+              wrap(wrapper) {
+                localFormatStrings.push(`@${wrapper.name} ${wrapper.params} { & }`)
+              },
+              container,
+            }
+
+            let ruleWithVariant = fn(api)
+            if (localFormatStrings.length > 0) {
+              formatStrings.push(localFormatStrings)
+            }
+
+            if (Array.isArray(ruleWithVariant)) {
+              for (let variantFunction of ruleWithVariant) {
+                localFormatStrings = []
+                variantFunction(api)
+                formatStrings.push(localFormatStrings)
+              }
+            }
+          }
+
+          // Reverse engineer the result of the `container`
+          let manualFormatStrings = []
+          let after = container.toString()
+
+          if (before !== after) {
+            // Figure out all selectors
+            container.walkRules((rule) => {
+              let modified = rule.selector
+
+              // Rebuild the base selector, this is what plugin authors would do
+              // as well. E.g.: `${variant}${separator}${className}`.
+              // However, plugin authors probably also prepend or append certain
+              // classes, pseudos, ids, ...
+              let rebuiltBase = selectorParser((selectors) => {
+                selectors.walkClasses((classNode) => {
+                  classNode.value = `${name}${context.tailwindConfig.separator}${classNode.value}`
+                })
+              }).processSync(modified)
+
+              // Now that we know the original selector, the new selector, and
+              // the rebuild part in between, we can replace the part that plugin
+              // authors need to rebuild with `&`, and eventually store it in the
+              // collectedFormats. Similar to what `format('...')` would do.
+              //
+              // E.g.:
+              //                   variant: foo
+              //                  selector: .markdown > p
+              //      modified (by plugin): .foo .foo\\:markdown > p
+              //    rebuiltBase (internal): .foo\\:markdown > p
+              //                    format: .foo &
+              manualFormatStrings.push(modified.replace(rebuiltBase, '&').replace(candidate, '&'))
+            })
+
+            // Figure out all atrules
+            container.walkAtRules((atrule) => {
+              manualFormatStrings.push(`@${atrule.name} (${atrule.params}) { & }`)
+            })
+          }
+
+          let result = formatStrings.map((formatString) =>
+            finalizeSelector(formatVariantSelector('&', ...formatString), {
+              selector: `.${candidate}`,
+              candidate,
+              context,
+              isArbitraryVariant: !(value in (options.values ?? {})),
+            })
+              .replace(`.${candidate}`, '&')
+              .replace('{ & }', '')
+              .trim()
+          )
+
+          if (manualFormatStrings.length > 0) {
+            result.push(formatVariantSelector('&', ...manualFormatStrings))
+          }
+
+          return result
+        },
+      })
+    }
+
+    return result
+  }
 }
 
 /**
@@ -912,13 +1165,15 @@ export function createContext(tailwindConfig, changedContent = [], root = postcs
     candidateRuleCache: new Map(),
     classCache: new Map(),
     applyClassCache: new Map(),
-    notClassCache: new Set(),
+    // Seed the not class cache with the blocklist (which is only strings)
+    notClassCache: new Set(tailwindConfig.blocklist ?? []),
     postCssNodeCache: new Map(),
     candidateRuleMap: new Map(),
     tailwindConfig,
     changedContent: changedContent,
     variantMap: new Map(),
     stylesheetCache: null,
+    variantOptions: new Map(),
 
     markInvalidUtilityCandidate: (candidate) => markInvalidUtilityCandidate(context, candidate),
     markInvalidUtilityNode: (node) => markInvalidUtilityNode(context, node),
