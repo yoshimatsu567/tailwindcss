@@ -358,14 +358,14 @@ test('custom addVariant with more complex media query params', () => {
     ],
     plugins: [
       function ({ addVariant }) {
-        addVariant('magic', '@media screen and (max-wdith: 600px)')
+        addVariant('magic', '@media screen and (max-width: 600px)')
       },
     ],
   }
 
   return run('@tailwind components;@tailwind utilities', config).then((result) => {
     return expect(result.css).toMatchFormattedCss(css`
-      @media screen and (max-wdith: 600px) {
+      @media screen and (max-width: 600px) {
         .magic\:text-center {
           text-align: center;
         }
@@ -1093,6 +1093,55 @@ test('variant functions returning arrays should output correct results when nest
       .test\:foo > * {
         grid-column: span 2;
       }
+    }
+  `)
+})
+
+test('arbitrary variant selectors should not re-order scrollbar pseudo classes', async () => {
+  let config = {
+    content: [
+      {
+        raw: html`
+          <div class="[&::-webkit-scrollbar:hover]:underline" />
+          <div class="[&::-webkit-scrollbar-button:hover]:underline" />
+          <div class="[&::-webkit-scrollbar-thumb:hover]:underline" />
+          <div class="[&::-webkit-scrollbar-track:hover]:underline" />
+          <div class="[&::-webkit-scrollbar-track-piece:hover]:underline" />
+          <div class="[&::-webkit-scrollbar-corner:hover]:underline" />
+          <div class="[&::-webkit-resizer:hover]:underline" />
+        `,
+      },
+    ],
+    corePlugins: { preflight: false },
+  }
+
+  let input = css`
+    @tailwind utilities;
+  `
+
+  let result = await run(input, config)
+
+  expect(result.css).toMatchFormattedCss(css`
+    .\[\&\:\:-webkit-scrollbar\:hover\]\:underline::-webkit-scrollbar:hover {
+      text-decoration-line: underline;
+    }
+    .\[\&\:\:-webkit-scrollbar-button\:hover\]\:underline::-webkit-scrollbar-button:hover {
+      text-decoration-line: underline;
+    }
+    .\[\&\:\:-webkit-scrollbar-thumb\:hover\]\:underline::-webkit-scrollbar-thumb:hover {
+      text-decoration-line: underline;
+    }
+    .\[\&\:\:-webkit-scrollbar-track\:hover\]\:underline::-webkit-scrollbar-track:hover {
+      text-decoration-line: underline;
+    }
+    .\[\&\:\:-webkit-scrollbar-track-piece\:hover\]\:underline::-webkit-scrollbar-track-piece:hover {
+      text-decoration-line: underline;
+    }
+    .\[\&\:\:-webkit-scrollbar-corner\:hover\]\:underline::-webkit-scrollbar-corner:hover {
+      text-decoration-line: underline;
+    }
+    .\[\&\:\:-webkit-resizer\:hover\]\:underline::-webkit-resizer:hover {
+      text-decoration-line: underline;
     }
   `)
 })

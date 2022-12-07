@@ -3,15 +3,13 @@ const os = require('os')
 const fs = require('fs-extra')
 
 const platformMap = {
-  darwin: 'macos',
-  win32: 'windows',
-  linux: 'linux',
+  darwin: `./dist/tailwindcss-macos-${process.arch}`,
+  linux: `./dist/tailwindcss-linux-${process.arch}`,
+  win32: `.\\dist\\tailwindcss-windows-${process.arch}`,
 }
 
 function exec(args) {
-  return execSync(
-    `./dist/tailwindcss-${platformMap[process.platform]}-${process.arch} ${args}`
-  ).toString()
+  return execSync(`${platformMap[process.platform]} ${args}`).toString()
 }
 
 it('works', () => {
@@ -30,6 +28,8 @@ it('supports first-party plugins', () => {
   expect(result).toContain('.form-input')
   expect(result).toContain('.line-clamp-2')
   expect(result).toContain('.prose')
+  expect(result).toContain('@container')
+  expect(result).toContain('@md\\:bg-teal-600')
 })
 
 it('supports postcss config files', async () => {

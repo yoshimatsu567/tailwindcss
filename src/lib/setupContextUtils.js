@@ -17,7 +17,7 @@ import { env } from './sharedState'
 import { toPath } from '../util/toPath'
 import log from '../util/log'
 import negateValue from '../util/negateValue'
-import isValidArbitraryValue from '../util/isValidArbitraryValue'
+import isSyntacticallyValidPropertyValue from '../util/isSyntacticallyValidPropertyValue'
 import { generateRules, getClassNameFromSelector } from './generateRules'
 import { hasContentChanged } from './cacheInvalidation.js'
 import { Offsets } from './offsets.js'
@@ -253,17 +253,10 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
   }
 
   function resolveThemeValue(path, defaultValue, opts = {}) {
-    const [pathRoot, ...subPaths] = toPath(path)
-    const value = getConfigValue(['theme', pathRoot, ...subPaths], defaultValue)
-    return transformThemeValue(pathRoot)(value, opts)
+    let parts = toPath(path)
+    let value = getConfigValue(['theme', ...parts], defaultValue)
+    return transformThemeValue(parts[0])(value, opts)
   }
-
-  const theme = Object.assign(
-    (path, defaultValue = undefined) => resolveThemeValue(path, defaultValue),
-    {
-      withAlpha: (path, opacityValue) => resolveThemeValue(path, undefined, { opacityValue }),
-    }
-  )
 
   let variantIdentifier = 0
   let api = {
@@ -271,7 +264,7 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
     prefix: applyConfiguredPrefix,
     e: escapeClassName,
     config: getConfigValue,
-    theme,
+    theme: resolveThemeValue,
     corePlugins: (path) => {
       if (Array.isArray(tailwindConfig.corePlugins)) {
         return tailwindConfig.corePlugins.includes(path)
@@ -407,7 +400,7 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
             }
           }
 
-          if (!isValidArbitraryValue(value)) {
+          if (!isSyntacticallyValidPropertyValue(value)) {
             return []
           }
 
@@ -487,7 +480,7 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
             }
           }
 
-          if (!isValidArbitraryValue(value)) {
+          if (!isSyntacticallyValidPropertyValue(value)) {
             return []
           }
 

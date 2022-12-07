@@ -133,18 +133,22 @@ export function parseColorFormat(value) {
   return value
 }
 
-export function asColor(
-  _,
-  options = {},
-  { tailwindConfig = {}, utilityModifier, rawModifier } = {}
-) {
-  if (options.values?.[rawModifier] !== undefined) {
-    return parseColorFormat(options.values?.[rawModifier])
+function unwrapArbitraryModifier(modifier) {
+  modifier = modifier.slice(1, -1)
+  if (modifier.startsWith('--')) {
+    modifier = `var(${modifier})`
+  }
+  return modifier
+}
+
+export function asColor(modifier, options = {}, { tailwindConfig = {} } = {}) {
+  if (options.values?.[modifier] !== undefined) {
+    return parseColorFormat(options.values?.[modifier])
   }
 
   // TODO: Hoist this up to getMatchingTypes or something
   // We do this here because we need the alpha value (if any)
-  let [color, alpha] = splitUtilityModifier(rawModifier)
+  let [color, alpha] = splitUtilityModifier(modifier)
 
   if (alpha !== undefined) {
     let normalizedColor =
@@ -157,7 +161,7 @@ export function asColor(
     normalizedColor = parseColorFormat(normalizedColor)
 
     if (isArbitraryValue(alpha)) {
-      return withAlphaValue(normalizedColor, alpha.slice(1, -1))
+      return withAlphaValue(normalizedColor, unwrapArbitraryModifier(alpha))
     }
 
     if (tailwindConfig.theme?.opacity?.[alpha] === undefined) {
@@ -167,7 +171,7 @@ export function asColor(
     return withAlphaValue(normalizedColor, tailwindConfig.theme.opacity[alpha])
   }
 
-  return asValue(rawModifier, options, { rawModifier, utilityModifier, validate: validateColor })
+  return asValue(modifier, options, { validate: validateColor })
 }
 
 export function asLookupValue(modifier, options = {}) {
@@ -175,8 +179,8 @@ export function asLookupValue(modifier, options = {}) {
 }
 
 function guess(validate) {
-  return (modifier, options, extras) => {
-    return asValue(modifier, options, { ...extras, validate })
+  return (modifier, options) => {
+    return asValue(modifier, options, { validate })
   }
 }
 
@@ -208,6 +212,20 @@ function splitAtFirst(input, delim) {
 }
 
 export function coerceValue(types, modifier, options, tailwindConfig) {
+  if (options.values && modifier in options.values) {
+    for (let { type } of types ?? []) {
+      let result = typeMap[type](modifier, options, {
+        tailwindConfig,
+      })
+
+      if (result === undefined) {
+        continue
+      }
+
+      return [result, type, null]
+    }
+  }
+
   if (isArbitraryValue(modifier)) {
     let arbitraryValue = modifier.slice(1, -1)
     let [explicitType, value] = splitAtFirst(arbitraryValue, ':')
@@ -277,20 +295,13 @@ export function* getMatchingTypes(types, rawModifier, options, tailwindConfig) {
       if (configValue !== null) {
         utilityModifier = configValue
       } else if (isArbitraryValue(utilityModifier)) {
-        utilityModifier = utilityModifier.slice(1, -1)
+        utilityModifier = unwrapArbitraryModifier(utilityModifier)
       }
-    }
-
-    let result = asValue(rawModifier, options, { rawModifier, utilityModifier, tailwindConfig })
-    if (result !== undefined) {
-      yield [result, 'any', null]
     }
   }
 
-  for (const { type } of types ?? []) {
+  for (let { type } of types ?? []) {
     let result = typeMap[type](modifier, options, {
-      rawModifier,
-      utilityModifier,
       tailwindConfig,
     })
 
