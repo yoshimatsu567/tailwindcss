@@ -71,8 +71,8 @@ crosscheck(() => {
     return run('@tailwind utilities', config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
         .font-sans {
-          font-family: Helvetica, Arial, sans-serif;
           font-feature-settings: 'cv11', 'ss01';
+          font-family: Helvetica, Arial, sans-serif;
         }
       `)
     })
@@ -91,10 +91,50 @@ crosscheck(() => {
     return run('@tailwind utilities', config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
         .font-sans {
-          font-family: Helvetica, Arial, sans-serif;
           font-feature-settings: 'cv11', 'ss01';
+          font-family: Helvetica, Arial, sans-serif;
         }
       `)
     })
+  })
+})
+
+test('font-variation-settings can be provided when families are defined as a string', () => {
+  let config = {
+    content: [{ raw: html`<div class="font-sans"></div>` }],
+    theme: {
+      fontFamily: {
+        sans: ['Inter, sans-serif', { fontVariationSettings: '"opsz" 32' }],
+      },
+    },
+  }
+
+  return run('@tailwind utilities', config).then((result) => {
+    expect(result.css).toMatchCss(`
+      .font-sans {
+        font-family: Inter, sans-serif;
+        font-variation-settings: "opsz" 32;
+      }
+    `)
+  })
+})
+
+test('font-variation-settings can be provided when families are defined as an array', () => {
+  let config = {
+    content: [{ raw: html`<div class="font-sans"></div>` }],
+    theme: {
+      fontFamily: {
+        sans: [['Inter', 'sans-serif'], { fontVariationSettings: '"opsz" 32' }],
+      },
+    },
+  }
+
+  return run('@tailwind utilities', config).then((result) => {
+    expect(result.css).toMatchCss(`
+      .font-sans {
+        font-family: Inter, sans-serif;
+        font-variation-settings: "opsz" 32;
+      }
+    `)
   })
 })

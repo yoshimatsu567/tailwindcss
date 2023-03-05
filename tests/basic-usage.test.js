@@ -161,6 +161,8 @@ crosscheck(({ stable, oxide }) => {
             <div class="stroke-current"></div>
             <div class="stroke-2"></div>
             <div class="table-fixed"></div>
+            <div class="caption-top"></div>
+            <div class="caption-bottom"></div>
             <div class="text-center"></div>
             <div class="indent-6 -indent-12"></div>
             <div class="text-indigo-500"></div>
@@ -243,14 +245,15 @@ crosscheck(({ stable, oxide }) => {
     `
 
     return run(input, config).then((result) => {
-      expect(result.css).toMatchFormattedCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         .bg-green-light {
           --tw-bg-opacity: 1;
           background-color: rgb(0 128 0 / var(--tw-bg-opacity));
         }
-
-        .bg-green {
-          /* Empty on purpose */
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        .bg-green-light {
+          background-color: green;
         }
       `)
     })
@@ -295,7 +298,7 @@ crosscheck(({ stable, oxide }) => {
     `
 
     return run(input, config).then((result) => {
-      expect(result.css).toMatchFormattedCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         .bg-theme {
           --tw-bg-opacity: 1;
           background-color: rgb(255 0 0 / var(--tw-bg-opacity));
@@ -303,6 +306,14 @@ crosscheck(({ stable, oxide }) => {
         .text-theme {
           --tw-text-opacity: 1;
           color: rgb(0 128 0 / var(--tw-text-opacity));
+        }
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        .bg-theme {
+          background-color: red;
+        }
+        .text-theme {
+          color: green;
         }
       `)
     })
@@ -379,10 +390,7 @@ crosscheck(({ stable, oxide }) => {
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
         .inset-0 {
-          top: 0;
-          right: 0;
-          bottom: 0;
-          left: 0;
+          inset: 0;
         }
       `)
     })
@@ -407,12 +415,7 @@ crosscheck(({ stable, oxide }) => {
 
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
-        .shadow-one {
-          --tw-shadow: 0.5rem 0.5rem 0.5rem #0005;
-          --tw-shadow-colored: 0.5rem 0.5rem 0.5rem var(--tw-shadow-color);
-          box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
-            var(--tw-shadow);
-        }
+        .shadow-one,
         .shadow-two {
           --tw-shadow: 0.5rem 0.5rem 0.5rem #0005;
           --tw-shadow-colored: 0.5rem 0.5rem 0.5rem var(--tw-shadow-color);
@@ -474,24 +477,19 @@ crosscheck(({ stable, oxide }) => {
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
         * {
-          color: blue;
+          color: #00f;
         }
-
         .combined,
         * {
           color: red;
         }
-
         ${defaults}
-
         .underline {
           text-decoration-line: underline;
         }
-
         * {
           color: red;
         }
-
         .combined,
         * {
           text-align: center;
@@ -518,7 +516,7 @@ crosscheck(({ stable, oxide }) => {
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
         .shadow-lg {
-          --tw-shadow: var(--a, 0 35px 60px -15px rgba(0, 0, 0)), 0 0 1px rgb(0, 0, 0);
+          --tw-shadow: var(--a, 0 35px 60px -15px #000), 0 0 1px #000;
           --tw-shadow-colored: 0 35px 60px -15px var(--tw-shadow-color),
             0 0 1px var(--tw-shadow-color);
           box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
@@ -591,7 +589,7 @@ crosscheck(({ stable, oxide }) => {
 
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
-        ${defaults({ defaultRingColor: 'rgb(59 130 246 / 0.5)' })}
+        ${defaults({ defaultRingColor: '#3b82f680' })}
         .ring {
           --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width)
             var(--tw-ring-offset-color);
@@ -622,7 +620,7 @@ crosscheck(({ stable, oxide }) => {
 
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
-        ${defaults({ defaultRingColor: 'rgb(59 130 246 / 0.75)' })}
+        ${defaults({ defaultRingColor: '#3b82f6bf' })}
         .ring {
           --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width)
             var(--tw-ring-offset-color);
@@ -653,7 +651,7 @@ crosscheck(({ stable, oxide }) => {
 
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
-        ${defaults({ defaultRingColor: 'rgb(255 127 127 / 0.5)' })}
+        ${defaults({ defaultRingColor: '#ff7f7f80' })}
         .ring {
           --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width)
             var(--tw-ring-offset-color);
@@ -684,7 +682,7 @@ crosscheck(({ stable, oxide }) => {
 
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
-        ${defaults({ defaultRingColor: 'rgb(255 127 127 / 0.5)' })}
+        ${defaults({ defaultRingColor: '#ff7f7f80' })}
         .ring {
           --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width)
             var(--tw-ring-offset-color);
@@ -840,7 +838,7 @@ crosscheck(({ stable, oxide }) => {
     })
   })
 
-  it('A bare ring-opacity utility is supported when using respectDefaultRingColorOpacity', () => {
+  test('A bare ring-opacity utility is supported when using respectDefaultRingColorOpacity', () => {
     let config = {
       future: { respectDefaultRingColorOpacity: true },
       content: [{ raw: html`<div class="ring-opacity"></div>` }],
@@ -857,11 +855,13 @@ crosscheck(({ stable, oxide }) => {
     `
 
     return run(input, config).then((result) => {
-      expect(result.css).toMatchFormattedCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         .ring-opacity {
           --tw-ring-opacity: 0.33;
         }
       `)
+      // The opacity plugins are disabled by default in the `oxide` engine
+      oxide.expect(result.css).toMatchFormattedCss(css``)
     })
   })
 
@@ -877,7 +877,7 @@ crosscheck(({ stable, oxide }) => {
     `
 
     return run(input, config).then((result) => {
-      expect(result.css).toMatchFormattedCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         .ring {
           --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width)
             var(--tw-ring-offset-color);
@@ -889,6 +889,19 @@ crosscheck(({ stable, oxide }) => {
         .ring-blue-500 {
           --tw-ring-opacity: 1;
           --tw-ring-color: rgb(59 130 246 / var(--tw-ring-opacity));
+        }
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        .ring {
+          --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width)
+            var(--tw-ring-offset-color);
+          --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width))
+            var(--tw-ring-color);
+          box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow),
+            var(--tw-shadow, 0 0 #0000);
+        }
+        .ring-blue-500 {
+          --tw-ring-color: #3b82f6;
         }
       `)
     })
@@ -968,9 +981,7 @@ crosscheck(({ stable, oxide }) => {
     `)
 
     stable.expect(result.css).toMatchFormattedCss(css`
-      .hidden {
-        display: none;
-      }
+      .hidden,
       .group[href^='/'] .group-\[\[href\^\=\'\/\'\]\]\:hidden {
         display: none;
       }
@@ -999,9 +1010,7 @@ crosscheck(({ stable, oxide }) => {
     `)
 
     stable.expect(result.css).toMatchFormattedCss(css`
-      .hidden {
-        display: none;
-      }
+      .hidden,
       .group[href^=' bar'] .group-\[\[href\^\=\'_bar\'\]\]\:hidden {
         display: none;
       }

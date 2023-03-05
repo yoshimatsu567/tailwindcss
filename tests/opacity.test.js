@@ -1,6 +1,6 @@
 import { crosscheck, run, html, css } from './util/run'
 
-crosscheck(() => {
+crosscheck(({ stable, oxide }) => {
   test('opacity', () => {
     let config = {
       darkMode: 'class',
@@ -25,19 +25,15 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
-        .divide-black > :not([hidden]) ~ :not([hidden]) {
-          border-color: #000;
-        }
+      expect(result.css).toMatchFormattedCss(css`
+        .divide-black > :not([hidden]) ~ :not([hidden]),
         .border-black {
           border-color: #000;
         }
         .bg-black {
           background-color: #000;
         }
-        .text-black {
-          color: #000;
-        }
+        .text-black,
         .placeholder-black::placeholder {
           color: #000;
         }
@@ -77,19 +73,15 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
-        .divide-primary > :not([hidden]) ~ :not([hidden]) {
-          border-color: rgb(var(--color-primary));
-        }
+      expect(result.css).toMatchFormattedCss(css`
+        .divide-primary > :not([hidden]) ~ :not([hidden]),
         .border-primary {
           border-color: rgb(var(--color-primary));
         }
         .bg-primary {
           background-color: rgb(var(--color-primary));
         }
-        .text-primary {
-          color: rgb(var(--color-primary));
-        }
+        .text-primary,
         .placeholder-primary::placeholder {
           color: rgb(var(--color-primary));
         }
@@ -125,7 +117,7 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         .divide-primary > :not([hidden]) ~ :not([hidden]) {
           --tw-divide-opacity: 1;
           border-color: rgb(var(--color-primary) / var(--tw-divide-opacity));
@@ -167,6 +159,22 @@ crosscheck(() => {
         }
         .ring-opacity-50 {
           --tw-ring-opacity: 0.5;
+        }
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        .divide-primary > :not([hidden]) ~ :not([hidden]),
+        .border-primary {
+          border-color: rgb(var(--color-primary) / 1);
+        }
+        .bg-primary {
+          background-color: rgb(var(--color-primary) / 1);
+        }
+        .text-primary,
+        .placeholder-primary::placeholder {
+          color: rgb(var(--color-primary) / 1);
+        }
+        .ring-primary {
+          --tw-ring-color: rgb(var(--color-primary) / 1);
         }
       `)
     })
@@ -277,7 +285,7 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         .divide-primary > :not([hidden]) ~ :not([hidden]) {
           --tw-divide-opacity: 1;
           border-color: hsl(var(--color-primary) / var(--tw-divide-opacity));
@@ -321,6 +329,22 @@ crosscheck(() => {
           --tw-ring-opacity: 0.5;
         }
       `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        .divide-primary > :not([hidden]) ~ :not([hidden]),
+        .border-primary {
+          border-color: hsl(var(--color-primary) / 1);
+        }
+        .bg-primary {
+          background-color: hsl(var(--color-primary) / 1);
+        }
+        .text-primary,
+        .placeholder-primary::placeholder {
+          color: hsl(var(--color-primary) / 1);
+        }
+        .ring-primary {
+          --tw-ring-color: hsl(var(--color-primary) / 1);
+        }
+      `)
     })
   })
 
@@ -360,7 +384,7 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      expect(result.css).toMatchFormattedCss(css`
         .divide-primary > :not([hidden]) ~ :not([hidden]) {
           border-color: hsl(var(--color-primary) / 1);
         }
@@ -408,7 +432,7 @@ crosscheck(() => {
 
     let output = css`
       .text-foo {
-        color: rgb(59 130 246 / 50%);
+        color: #3b82f680;
       }
     `
 
@@ -424,7 +448,7 @@ crosscheck(() => {
         },
       },
     }).then((result) => {
-      expect(result.css).toMatchCss(output)
+      expect(result.css).toMatchFormattedCss(output)
       expect(result.warnings().length).toBe(0)
     })
   })
@@ -436,7 +460,7 @@ crosscheck(() => {
 
     let output = css`
       .text-foo {
-        color: rgb(59 130 246 / 0.5);
+        color: #3b82f680;
       }
     `
 
@@ -452,7 +476,7 @@ crosscheck(() => {
         },
       },
     }).then((result) => {
-      expect(result.css).toMatchCss(output)
+      expect(result.css).toMatchFormattedCss(output)
       expect(result.warnings().length).toBe(0)
     })
   })
@@ -480,7 +504,7 @@ crosscheck(() => {
         },
       },
     }).then((result) => {
-      expect(result.css).toMatchCss(output)
+      expect(result.css).toMatchFormattedCss(output)
       expect(result.warnings().length).toBe(0)
     })
   })
@@ -492,7 +516,7 @@ crosscheck(() => {
 
     let output = css`
       .text-foo {
-        color: hsl(217 91% 60% / 50%);
+        color: #3c83f680;
       }
     `
 
@@ -508,7 +532,7 @@ crosscheck(() => {
         },
       },
     }).then((result) => {
-      expect(result.css).toMatchCss(output)
+      expect(result.css).toMatchFormattedCss(output)
       expect(result.warnings().length).toBe(0)
     })
   })
@@ -520,7 +544,7 @@ crosscheck(() => {
 
     let output = css`
       .text-foo {
-        color: hsl(217 91% 60% / 0.5);
+        color: #3c83f680;
       }
     `
 
@@ -536,7 +560,7 @@ crosscheck(() => {
         },
       },
     }).then((result) => {
-      expect(result.css).toMatchCss(output)
+      expect(result.css).toMatchFormattedCss(output)
       expect(result.warnings().length).toBe(0)
     })
   })
@@ -564,7 +588,7 @@ crosscheck(() => {
         },
       },
     }).then((result) => {
-      expect(result.css).toMatchCss(output)
+      expect(result.css).toMatchFormattedCss(output)
       expect(result.warnings().length).toBe(0)
     })
   })
@@ -596,7 +620,7 @@ crosscheck(() => {
         },
       },
     }).then((result) => {
-      expect(result.css).toMatchCss(output)
+      expect(result.css).toMatchFormattedCss(output)
       expect(result.warnings().length).toBe(0)
     })
   })
@@ -628,7 +652,7 @@ crosscheck(() => {
         },
       },
     }).then((result) => {
-      expect(result.css).toMatchCss(output)
+      expect(result.css).toMatchFormattedCss(output)
       expect(result.warnings().length).toBe(0)
     })
   })
@@ -649,7 +673,7 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      expect(result.css).toMatchFormattedCss(css`
         .bg-primary {
           --tw-bg-opacity: 1;
           background-color: rgb(var(--color-primary) / var(--tw-bg-opacity));
@@ -674,7 +698,7 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      expect(result.css).toMatchFormattedCss(css`
         .bg-primary\/50 {
           background-color: rgb(var(--color-primary) / 0.5);
         }
@@ -698,7 +722,7 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      expect(result.css).toMatchFormattedCss(css`
         .bg-primary {
           background-color: rgb(var(--color-primary) / 1);
         }
@@ -722,7 +746,7 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      expect(result.css).toMatchFormattedCss(css`
         .bg-\[rgb\(var\(--color-primary\)\/\<alpha-value\>\)\]\/50 {
           background-color: rgb(var(--color-primary) / 0.5);
         }
@@ -751,13 +775,21 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         .bg-foo1 {
           --tw-bg-opacity: 1;
           background-color: rgb(0 0 0 / var(--tw-bg-opacity));
         }
         .bg-foo2 {
-          background-color: rgb(0 0 0 / 50%);
+          background-color: #00000080;
+        }
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        .bg-foo1 {
+          background-color: #000;
+        }
+        .bg-foo2 {
+          background-color: #00000080;
         }
       `)
     })
@@ -799,32 +831,58 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         .bg-foo10 {
-          background-color: rgb(255 100 0 / 100%);
+          background-color: #ff6400;
         }
         .bg-foo11 {
-          background-color: rgb(255 100 0 / 50%);
+          background-color: #ff640080;
         }
         .bg-foo20 {
           --tw-bg-opacity: 1;
           background-color: rgb(255 100 0 / var(--tw-bg-opacity));
         }
         .bg-foo21 {
-          background-color: rgb(255 100 0 / 50%);
+          background-color: #ff640080;
         }
         .bg-foo30 {
-          background-color: rgb(255 100 0 / 100%);
+          background-color: #ff6400;
         }
         .bg-foo31 {
-          background-color: rgb(255 100 0 / 50%);
+          background-color: #ff640080;
         }
         .bg-foo40 {
           --tw-bg-opacity: 1;
           background-color: rgb(255 100 0 / var(--tw-bg-opacity));
         }
         .bg-foo41 {
-          background-color: rgb(255 100 0 / 50%);
+          background-color: #ff640080;
+        }
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        .bg-foo10 {
+          background-color: #ff6400;
+        }
+        .bg-foo11 {
+          background-color: #ff640080;
+        }
+        .bg-foo20 {
+          background-color: #ff6400;
+        }
+        .bg-foo21 {
+          background-color: #ff640080;
+        }
+        .bg-foo30 {
+          background-color: #ff6400;
+        }
+        .bg-foo31 {
+          background-color: #ff640080;
+        }
+        .bg-foo40 {
+          background-color: #ff6400;
+        }
+        .bg-foo41 {
+          background-color: #ff640080;
         }
       `)
     })
@@ -856,12 +914,12 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      expect(result.css).toMatchFormattedCss(css`
         .divide-blue-300 > :not([hidden]) ~ :not([hidden]) {
           border-color: #93c5fd;
         }
         .divide-blue-300\/50 > :not([hidden]) ~ :not([hidden]) {
-          border-color: rgb(147 197 253 / 0.5);
+          border-color: #93c5fd80;
         }
         .divide-blue-300\/\[var\(--my-opacity\)\] > :not([hidden]) ~ :not([hidden]) {
           border-color: rgb(147 197 253 / var(--my-opacity));
@@ -870,7 +928,7 @@ crosscheck(() => {
           border-color: #93c5fd;
         }
         .border-blue-300\/50 {
-          border-color: rgb(147 197 253 / 0.5);
+          border-color: #93c5fd80;
         }
         .border-blue-300\/\[var\(--my-opacity\)\] {
           border-color: rgb(147 197 253 / var(--my-opacity));
@@ -879,7 +937,7 @@ crosscheck(() => {
           background-color: #93c5fd;
         }
         .bg-blue-300\/50 {
-          background-color: rgb(147 197 253 / 0.5);
+          background-color: #93c5fd80;
         }
         .bg-blue-300\/\[var\(--my-opacity\)\] {
           background-color: rgb(147 197 253 / var(--my-opacity));
@@ -888,7 +946,7 @@ crosscheck(() => {
           color: #93c5fd;
         }
         .text-blue-300\/50 {
-          color: rgb(147 197 253 / 0.5);
+          color: #93c5fd80;
         }
         .text-blue-300\/\[var\(--my-opacity\)\] {
           color: rgb(147 197 253 / var(--my-opacity));
@@ -897,7 +955,7 @@ crosscheck(() => {
           color: #93c5fd;
         }
         .placeholder-blue-300\/50::placeholder {
-          color: rgb(147 197 253 / 0.5);
+          color: #93c5fd80;
         }
         .placeholder-blue-300\/\[var\(--my-opacity\)\]::placeholder {
           color: rgb(147 197 253 / var(--my-opacity));
@@ -906,7 +964,7 @@ crosscheck(() => {
           --tw-ring-color: #93c5fd;
         }
         .ring-blue-300\/50 {
-          --tw-ring-color: rgb(147 197 253 / 0.5);
+          --tw-ring-color: #93c5fd80;
         }
         .ring-blue-300\/\[var\(--my-opacity\)\] {
           --tw-ring-color: rgb(147 197 253 / var(--my-opacity));
@@ -949,13 +1007,13 @@ crosscheck(() => {
     }
 
     return run('@tailwind utilities', config).then((result) => {
-      expect(result.css).toMatchCss(css`
+      expect(result.css).toMatchFormattedCss(css`
         .divide-blue-300 > :not([hidden]) ~ :not([hidden]) {
           --tw-divide-opacity: 1;
           border-color: rgb(147 197 253 / var(--tw-divide-opacity));
         }
         .divide-blue-300\/50 > :not([hidden]) ~ :not([hidden]) {
-          border-color: rgb(147 197 253 / 0.5);
+          border-color: #93c5fd80;
         }
         .divide-blue-300\/\[var\(--my-opacity\)\] > :not([hidden]) ~ :not([hidden]) {
           border-color: rgb(147 197 253 / var(--my-opacity));
@@ -968,7 +1026,7 @@ crosscheck(() => {
           border-color: rgb(147 197 253 / var(--tw-border-opacity));
         }
         .border-blue-300\/50 {
-          border-color: rgb(147 197 253 / 0.5);
+          border-color: #93c5fd80;
         }
         .border-blue-300\/\[var\(--my-opacity\)\] {
           border-color: rgb(147 197 253 / var(--my-opacity));
@@ -981,7 +1039,7 @@ crosscheck(() => {
           background-color: rgb(147 197 253 / var(--tw-bg-opacity));
         }
         .bg-blue-300\/50 {
-          background-color: rgb(147 197 253 / 0.5);
+          background-color: #93c5fd80;
         }
         .bg-blue-300\/\[var\(--my-opacity\)\] {
           background-color: rgb(147 197 253 / var(--my-opacity));
@@ -994,7 +1052,7 @@ crosscheck(() => {
           color: rgb(147 197 253 / var(--tw-text-opacity));
         }
         .text-blue-300\/50 {
-          color: rgb(147 197 253 / 0.5);
+          color: #93c5fd80;
         }
         .text-blue-300\/\[var\(--my-opacity\)\] {
           color: rgb(147 197 253 / var(--my-opacity));
@@ -1007,7 +1065,7 @@ crosscheck(() => {
           color: rgb(147 197 253 / var(--tw-placeholder-opacity));
         }
         .placeholder-blue-300\/50::placeholder {
-          color: rgb(147 197 253 / 0.5);
+          color: #93c5fd80;
         }
         .placeholder-blue-300\/\[var\(--my-opacity\)\]::placeholder {
           color: rgb(147 197 253 / var(--my-opacity));
@@ -1020,7 +1078,7 @@ crosscheck(() => {
           --tw-ring-color: rgb(147 197 253 / var(--tw-ring-opacity));
         }
         .ring-blue-300\/50 {
-          --tw-ring-color: rgb(147 197 253 / 0.5);
+          --tw-ring-color: #93c5fd80;
         }
         .ring-blue-300\/\[var\(--my-opacity\)\] {
           --tw-ring-color: rgb(147 197 253 / var(--my-opacity));
@@ -1030,5 +1088,28 @@ crosscheck(() => {
         }
       `)
     })
+  })
+
+  it('can replace the potential alpha value in rgba/hsla syntax', async () => {
+    let config = {
+      content: [{ raw: html` <div class="text-primary-rgba/50 text-primary-hsla/50"></div> ` }],
+      theme: {
+        colors: {
+          'primary-rgba': 'rgba(var(--color), 0.1)',
+          'primary-hsla': 'hsla(var(--color), 0.1)',
+        },
+      },
+    }
+
+    let result = await run('@tailwind utilities', config)
+
+    expect(result.css).toMatchFormattedCss(css`
+      .text-primary-hsla\/50 {
+        color: hsla(var(--color), 0.5);
+      }
+      .text-primary-rgba\/50 {
+        color: rgba(var(--color), 0.5);
+      }
+    `)
   })
 })

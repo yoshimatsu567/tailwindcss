@@ -3,7 +3,7 @@ import { createContext } from '../src/lib/setupContextUtils'
 
 import { crosscheck, run, html, css } from './util/run'
 
-crosscheck(() => {
+crosscheck(({ stable, oxide }) => {
   test('partial arbitrary variants', () => {
     let config = {
       content: [
@@ -24,14 +24,21 @@ crosscheck(() => {
     `
 
     return run(input, config).then((result) => {
-      expect(result.css).toMatchFormattedCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         .potato-baked .potato-\[baked\]\:w-3 {
           width: 0.75rem;
         }
-
         .potato-yellow .potato-\[yellow\]\:bg-yellow-200 {
           --tw-bg-opacity: 1;
           background-color: rgb(254 240 138 / var(--tw-bg-opacity));
+        }
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        .potato-baked .potato-\[baked\]\:w-3 {
+          width: 0.75rem;
+        }
+        .potato-yellow .potato-\[yellow\]\:bg-yellow-200 {
+          background-color: #fef08a;
         }
       `)
     })
@@ -57,7 +64,7 @@ crosscheck(() => {
     `
 
     return run(input, config).then((result) => {
-      expect(result.css).toMatchFormattedCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         @media (potato: baked) {
           .potato-\[baked\]\:w-3 {
             width: 0.75rem;
@@ -67,6 +74,18 @@ crosscheck(() => {
           .potato-\[yellow\]\:bg-yellow-200 {
             --tw-bg-opacity: 1;
             background-color: rgb(254 240 138 / var(--tw-bg-opacity));
+          }
+        }
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        @media (potato: baked) {
+          .potato-\[baked\]\:w-3 {
+            width: 0.75rem;
+          }
+        }
+        @media (potato: yellow) {
+          .potato-\[yellow\]\:bg-yellow-200 {
+            background-color: #fef08a;
           }
         }
       `)
@@ -93,7 +112,7 @@ crosscheck(() => {
     `
 
     return run(input, config).then((result) => {
-      expect(result.css).toMatchFormattedCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         @media (potato: baked) {
           .potato-\[baked\]\:w-3:potato {
             width: 0.75rem;
@@ -103,6 +122,18 @@ crosscheck(() => {
           .potato-\[yellow\]\:bg-yellow-200:potato {
             --tw-bg-opacity: 1;
             background-color: rgb(254 240 138 / var(--tw-bg-opacity));
+          }
+        }
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        @media (potato: baked) {
+          .potato-\[baked\]\:w-3:potato {
+            width: 0.75rem;
+          }
+        }
+        @media (potato: yellow) {
+          .potato-\[yellow\]\:bg-yellow-200:potato {
+            background-color: #fef08a;
           }
         }
       `)
@@ -138,7 +169,6 @@ crosscheck(() => {
         .tooltip-bottom\:mt-2[data-location='bottom'] {
           margin-top: 0.5rem;
         }
-
         .tooltip-top\:mb-2[data-location='top'] {
           margin-bottom: 0.5rem;
         }
@@ -176,18 +206,9 @@ crosscheck(() => {
 
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
-        .alphabet-a\:underline[data-value='a'] {
-          text-decoration-line: underline;
-        }
-
-        .alphabet-b\:underline[data-value='b'] {
-          text-decoration-line: underline;
-        }
-
-        .alphabet-c\:underline[data-value='c'] {
-          text-decoration-line: underline;
-        }
-
+        .alphabet-a\:underline[data-value='a'],
+        .alphabet-b\:underline[data-value='b'],
+        .alphabet-c\:underline[data-value='c'],
         .alphabet-d\:underline[data-value='d'] {
           text-decoration-line: underline;
         }
@@ -218,15 +239,9 @@ crosscheck(() => {
 
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
-        .test-\[a\2c b\2c c\]\:underline.a > * {
-          text-decoration-line: underline;
-        }
-
-        .test-\[a\2c b\2c c\]\:underline.b > * {
-          text-decoration-line: underline;
-        }
-
-        .test-\[a\2c b\2c c\]\:underline.c > * {
+        .test-\[a\,b\,c\]\:underline.a > *,
+        .test-\[a\,b\,c\]\:underline.b > *,
+        .test-\[a\,b\,c\]\:underline.c > * {
           text-decoration-line: underline;
         }
       `)
@@ -267,7 +282,6 @@ crosscheck(() => {
             text-decoration-line: underline;
           }
         }
-
         @media (min-width: 700px) {
           .testmin-\[700px\]\:italic {
             font-style: italic;
@@ -316,13 +330,11 @@ crosscheck(() => {
             font-style: italic;
           }
         }
-
         @media (min-width: 600px) {
           .testmin-example\:italic {
             font-style: italic;
           }
         }
-
         @media (min-width: 700px) {
           .testmin-\[700px\]\:italic {
             font-style: italic;
@@ -391,7 +403,6 @@ crosscheck(() => {
             }
           }
         }
-
         @media (min-width: 150px) {
           @media (max-width: 400px) {
             .testmin-\[150px\]\:testmax-\[400px\]\:underline {
@@ -441,9 +452,7 @@ crosscheck(() => {
       expect(result.css).toMatchFormattedCss(css`
         @media (min-width: 100px) {
           @media (max-width: 200px) {
-            .testmin-\[100px\]\:testmax-\[200px\]\:hover\:underline:hover {
-              text-decoration-line: underline;
-            }
+            .testmin-\[100px\]\:testmax-\[200px\]\:hover\:underline:hover,
             .testmin-\[100px\]\:testmax-\[200px\]\:focus\:underline:focus {
               text-decoration-line: underline;
             }
@@ -496,21 +505,18 @@ crosscheck(() => {
               text-decoration-line: underline;
             }
           }
-
           @media (max-width: 300px) {
             .testmin-\[100px\]\:testmax-\[300px\]\:underline {
               text-decoration-line: underline;
             }
           }
         }
-
         @media (min-width: 200px) {
           @media (max-width: 400px) {
             .testmin-\[200px\]\:testmax-\[400px\]\:underline {
               text-decoration-line: underline;
             }
           }
-
           @media (max-width: 300px) {
             .testmin-\[200px\]\:testmax-\[300px\]\:underline {
               text-decoration-line: underline;

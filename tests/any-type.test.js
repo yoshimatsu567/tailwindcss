@@ -283,15 +283,11 @@ crosscheck(({ stable, oxide }) => {
         .flex-\[var\(--any-value\)\] {
           flex: var(--any-value);
         }
-        .flex-shrink-\[var\(--any-value\)\] {
-          flex-shrink: var(--any-value);
-        }
+        .flex-shrink-\[var\(--any-value\)\],
         .shrink-\[var\(--any-value\)\] {
           flex-shrink: var(--any-value);
         }
-        .flex-grow-\[var\(--any-value\)\] {
-          flex-grow: var(--any-value);
-        }
+        .flex-grow-\[var\(--any-value\)\],
         .grow-\[var\(--any-value\)\] {
           flex-grow: var(--any-value);
         }
@@ -432,8 +428,8 @@ crosscheck(({ stable, oxide }) => {
         }
         .space-x-\[var\(--any-value\)\] > :not([hidden]) ~ :not([hidden]) {
           --tw-space-x-reverse: 0;
-          margin-inline-end: calc(var(--any-value) * var(--tw-space-x-reverse));
           margin-inline-start: calc(var(--any-value) * calc(1 - var(--tw-space-x-reverse)));
+          margin-inline-end: calc(var(--any-value) * var(--tw-space-x-reverse));
         }
         .space-y-\[var\(--any-value\)\] > :not([hidden]) ~ :not([hidden]) {
           --tw-space-y-reverse: 0;
@@ -447,9 +443,6 @@ crosscheck(({ stable, oxide }) => {
         }
         .divide-\[var\(--any-value\)\] > :not([hidden]) ~ :not([hidden]) {
           border-color: var(--any-value);
-        }
-        .divide-opacity-\[var\(--any-value\)\] > :not([hidden]) ~ :not([hidden]) {
-          --tw-divide-opacity: var(--any-value);
         }
         .rounded-\[var\(--any-value\)\] {
           border-radius: var(--any-value);
@@ -505,22 +498,16 @@ crosscheck(({ stable, oxide }) => {
         .border-t-\[var\(--any-value\)\] {
           border-top-color: var(--any-value);
         }
-        .border-opacity-\[var\(--any-value\)\] {
-          --tw-border-opacity: var(--any-value);
-        }
         .bg-\[var\(--any-value\)\] {
           background-color: var(--any-value);
         }
-        .bg-opacity-\[var\(--any-value\)\] {
-          --tw-bg-opacity: var(--any-value);
-        }
         .from-\[var\(--any-value\)\] {
           --tw-gradient-from: var(--any-value);
-          --tw-gradient-to: rgb(255 255 255 / 0);
+          --tw-gradient-to: #fff0;
           --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
         }
         .via-\[var\(--any-value\)\] {
-          --tw-gradient-to: rgb(255 255 255 / 0);
+          --tw-gradient-to: #fff0;
           --tw-gradient-stops: var(--tw-gradient-from), var(--any-value), var(--tw-gradient-to);
         }
         .to-\[var\(--any-value\)\] {
@@ -576,9 +563,6 @@ crosscheck(({ stable, oxide }) => {
         .text-\[var\(--any-value\)\] {
           color: var(--any-value);
         }
-        .text-opacity-\[var\(--any-value\)\] {
-          --tw-text-opacity: var(--any-value);
-        }
         .decoration-\[var\(--any-value\)\] {
           text-decoration-color: var(--any-value);
         }
@@ -587,9 +571,6 @@ crosscheck(({ stable, oxide }) => {
         }
         .placeholder-\[var\(--any-value\)\]::placeholder {
           color: var(--any-value);
-        }
-        .placeholder-opacity-\[var\(--any-value\)\]::placeholder {
-          --tw-placeholder-opacity: var(--any-value);
         }
         .caret-\[var\(--any-value\)\] {
           caret-color: var(--any-value);
@@ -612,9 +593,6 @@ crosscheck(({ stable, oxide }) => {
         }
         .ring-\[var\(--any-value\)\] {
           --tw-ring-color: var(--any-value);
-        }
-        .ring-opacity-\[var\(--any-value\)\] {
-          --tw-ring-opacity: var(--any-value);
         }
         .ring-offset-\[var\(--any-value\)\] {
           --tw-ring-offset-color: var(--any-value);
@@ -738,8 +716,8 @@ crosscheck(({ stable, oxide }) => {
         }
         .transition-\[var\(--any-value\)\] {
           transition-property: var(--any-value);
+          transition-duration: 0.15s;
           transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-          transition-duration: 150ms;
         }
         .delay-\[var\(--any-value\)\] {
           transition-delay: var(--any-value);
@@ -856,15 +834,11 @@ crosscheck(({ stable, oxide }) => {
         .flex-\[var\(--any-value\)\] {
           flex: var(--any-value);
         }
-        .flex-shrink-\[var\(--any-value\)\] {
-          flex-shrink: var(--any-value);
-        }
+        .flex-shrink-\[var\(--any-value\)\],
         .shrink-\[var\(--any-value\)\] {
           flex-shrink: var(--any-value);
         }
-        .flex-grow-\[var\(--any-value\)\] {
-          flex-grow: var(--any-value);
-        }
+        .flex-grow-\[var\(--any-value\)\],
         .grow-\[var\(--any-value\)\] {
           flex-grow: var(--any-value);
         }
@@ -1089,11 +1063,11 @@ crosscheck(({ stable, oxide }) => {
         }
         .from-\[var\(--any-value\)\] {
           --tw-gradient-from: var(--any-value);
-          --tw-gradient-to: rgb(255 255 255 / 0);
+          --tw-gradient-to: #fff0;
           --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
         }
         .via-\[var\(--any-value\)\] {
-          --tw-gradient-to: rgb(255 255 255 / 0);
+          --tw-gradient-to: #fff0;
           --tw-gradient-stops: var(--tw-gradient-from), var(--any-value), var(--tw-gradient-to);
         }
         .to-\[var\(--any-value\)\] {
@@ -1311,8 +1285,8 @@ crosscheck(({ stable, oxide }) => {
         }
         .transition-\[var\(--any-value\)\] {
           transition-property: var(--any-value);
+          transition-duration: 0.15s;
           transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-          transition-duration: 150ms;
         }
         .delay-\[var\(--any-value\)\] {
           transition-delay: var(--any-value);

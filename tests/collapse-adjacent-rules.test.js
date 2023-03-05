@@ -1,6 +1,6 @@
 import { crosscheck, run, html, css, defaults } from './util/run'
 
-crosscheck(() => {
+crosscheck(({ stable, oxide }) => {
   test('collapse adjacent rules', () => {
     let config = {
       content: [
@@ -71,24 +71,24 @@ crosscheck(() => {
     `
 
     return run(input, config).then((result) => {
-      expect(result.css).toMatchFormattedCss(css`
+      stable.expect(result.css).toMatchFormattedCss(css`
         @font-face {
-          font-family: 'Poppins';
+          font-family: Poppins;
           src: url('/fonts/Poppins.woff2') format('woff2'),
             url('/fonts/Poppins.woff') format('woff');
         }
         @font-face {
-          font-family: 'Proxima Nova';
+          font-family: Proxima Nova;
           src: url('/fonts/ProximaNova.woff2') format('woff2'),
             url('/fonts/ProximaNova.woff') format('woff');
         }
         ${defaults}
         @font-face {
-          font-family: 'Inter';
+          font-family: Inter;
           src: url('/fonts/Inter.woff2') format('woff2'), url('/fonts/Inter.woff') format('woff');
         }
         @font-face {
-          font-family: 'Gilroy';
+          font-family: Gilroy;
           src: url('/fonts/Gilroy.woff2') format('woff2'), url('/fonts/Gilroy.woff') format('woff');
         }
         @page {
@@ -99,29 +99,105 @@ crosscheck(() => {
         }
         .foo,
         .bar {
-          color: black;
+          color: #000;
           font-weight: 700;
         }
         @supports (foo: bar) {
           .some-apply-thing {
-            font-weight: 700;
             --tw-text-opacity: 1;
             color: rgb(0 0 0 / var(--tw-text-opacity));
+            font-weight: 700;
           }
         }
         @media (min-width: 768px) {
           .some-apply-thing {
-            font-weight: 700;
             --tw-text-opacity: 1;
             color: rgb(0 0 0 / var(--tw-text-opacity));
+            font-weight: 700;
           }
         }
         @supports (foo: bar) {
           @media (min-width: 768px) {
             .some-apply-thing {
-              font-weight: 700;
               --tw-text-opacity: 1;
               color: rgb(0 0 0 / var(--tw-text-opacity));
+              font-weight: 700;
+            }
+          }
+        }
+        @media (min-width: 640px) {
+          .sm\:text-center {
+            text-align: center;
+          }
+          .sm\:font-bold {
+            font-weight: 700;
+          }
+        }
+        @media (min-width: 768px) {
+          .md\:text-center {
+            text-align: center;
+          }
+          .md\:font-bold {
+            font-weight: 700;
+          }
+        }
+        @media (min-width: 1024px) {
+          .lg\:text-center {
+            text-align: center;
+          }
+          .lg\:font-bold {
+            font-weight: 700;
+          }
+        }
+      `)
+      oxide.expect(result.css).toMatchFormattedCss(css`
+        @font-face {
+          font-family: Poppins;
+          src: url('/fonts/Poppins.woff2') format('woff2'),
+            url('/fonts/Poppins.woff') format('woff');
+        }
+        @font-face {
+          font-family: Proxima Nova;
+          src: url('/fonts/ProximaNova.woff2') format('woff2'),
+            url('/fonts/ProximaNova.woff') format('woff');
+        }
+        ${defaults}
+        @font-face {
+          font-family: Inter;
+          src: url('/fonts/Inter.woff2') format('woff2'), url('/fonts/Inter.woff') format('woff');
+        }
+        @font-face {
+          font-family: Gilroy;
+          src: url('/fonts/Gilroy.woff2') format('woff2'), url('/fonts/Gilroy.woff') format('woff');
+        }
+        @page {
+          margin: 1cm;
+        }
+        .font-bold {
+          font-weight: 700;
+        }
+        .foo,
+        .bar {
+          color: #000;
+          font-weight: 700;
+        }
+        @supports (foo: bar) {
+          .some-apply-thing {
+            color: #000;
+            font-weight: 700;
+          }
+        }
+        @media (min-width: 768px) {
+          .some-apply-thing {
+            color: #000;
+            font-weight: 700;
+          }
+        }
+        @supports (foo: bar) {
+          @media (min-width: 768px) {
+            .some-apply-thing {
+              color: #000;
+              font-weight: 700;
             }
           }
         }
@@ -166,7 +242,7 @@ crosscheck(() => {
 
     return run(input, config).then((result) => {
       expect(result.css).toMatchFormattedCss(css`
-        @import url('https://example.com');
+        @import 'https://example.com';
       `)
     })
   })
