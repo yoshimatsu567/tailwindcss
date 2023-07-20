@@ -18,7 +18,6 @@ import {
 } from './dataTypes'
 import negateValue from './negateValue'
 import { backgroundSize } from './validateFormalSyntax'
-import { flagEnabled } from '../featureFlags.js'
 
 /**
  * @param {import('postcss-selector-parser').Container} selectors
@@ -115,11 +114,7 @@ export function parseColorFormat(value) {
 }
 
 function unwrapArbitraryModifier(modifier) {
-  modifier = modifier.slice(1, -1)
-  if (modifier.startsWith('--')) {
-    modifier = `var(${modifier})`
-  }
-  return modifier
+  return normalize(modifier.slice(1, -1))
 }
 
 export function asColor(modifier, options = {}, { tailwindConfig = {} } = {}) {
@@ -247,12 +242,9 @@ export function coerceValue(types, modifier, options, tailwindConfig) {
  * @returns {Iterator<[value: string, type: string, modifier: string | null]>}
  */
 export function* getMatchingTypes(types, rawModifier, options, tailwindConfig) {
-  let modifiersEnabled = flagEnabled(tailwindConfig, 'generalizedModifiers')
-
   let [modifier, utilityModifier] = splitUtilityModifier(rawModifier)
 
   let canUseUtilityModifier =
-    modifiersEnabled &&
     options.modifiers != null &&
     (options.modifiers === 'any' ||
       (typeof options.modifiers === 'object' &&

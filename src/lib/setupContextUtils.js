@@ -21,8 +21,9 @@ import isSyntacticallyValidPropertyValue from '../util/isSyntacticallyValidPrope
 import { generateRules, getClassNameFromSelector } from './generateRules'
 import { hasContentChanged } from './cacheInvalidation.js'
 import { Offsets } from './offsets.js'
-import { flagEnabled } from '../featureFlags.js'
 import { finalizeSelector, formatVariantSelector } from '../util/formatVariantSelector'
+
+export const INTERNAL_FEATURES = Symbol()
 
 const VARIANT_TYPES = {
   AddVariant: Symbol.for('ADD_VARIANT'),
@@ -230,8 +231,8 @@ export function parseVariant(variant) {
         return ({ format }) => format(str)
       }
 
-      let [, name, params] = /@(.*?)( .+|[({].*)/g.exec(str)
-      return ({ wrap }) => wrap(postcss.atRule({ name, params: params.trim() }))
+      let [, name, params] = /@(\S*)( .+|[({].*)?/g.exec(str)
+      return ({ wrap }) => wrap(postcss.atRule({ name, params: params?.trim() ?? '' }))
     })
     .reverse()
 
@@ -434,10 +435,8 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
             },
           }
 
-          let modifiersEnabled = flagEnabled(tailwindConfig, 'generalizedModifiers')
-
           let ruleSets = []
-            .concat(modifiersEnabled ? rule(value, extras) : rule(value))
+            .concat(rule(value, extras))
             .filter(Boolean)
             .map((declaration) => ({
               [nameClass(identifier, modifier)]: declaration,
@@ -514,10 +513,8 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
             },
           }
 
-          let modifiersEnabled = flagEnabled(tailwindConfig, 'generalizedModifiers')
-
           let ruleSets = []
-            .concat(modifiersEnabled ? rule(value, extras) : rule(value))
+            .concat(rule(value, extras))
             .filter(Boolean)
             .map((declaration) => ({
               [nameClass(identifier, modifier)]: declaration,
@@ -585,18 +582,13 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
       let id = options?.id ?? ++variantIdentifier
       let isSpecial = variant === '@'
 
-      let modifiersEnabled = flagEnabled(tailwindConfig, 'generalizedModifiers')
-
       for (let [key, value] of Object.entries(options?.values ?? {})) {
         if (key === 'DEFAULT') continue
 
         api.addVariant(
           isSpecial ? `${variant}${key}` : `${variant}-${key}`,
           ({ args, container }) => {
-            return variantFn(
-              value,
-              modifiersEnabled ? { modifier: args?.modifier, container } : { container }
-            )
+            return variantFn(value, { modifier: args?.modifier, container })
           },
 
           {
@@ -624,7 +616,7 @@ function buildPluginApi(tailwindConfig, context, { variantList, variantMap, offs
               : // Falling back to args if it is a string, otherwise '' for older intellisense
                 // (JetBrains) plugins.
                 args?.value ?? (typeof args === 'string' ? args : ''),
-            modifiersEnabled ? { modifier: args?.modifier, container } : { container }
+            { modifier: args?.modifier, container }
           )
         },
         {
@@ -729,7 +721,7 @@ function collectLayerPlugins(root) {
 }
 
 function resolvePlugins(context, root) {
-  let corePluginList = Object.entries({ ...variantPlugins, ...corePlugins })
+  let corePluginList = Object.entries(corePlugins)
     .map(([name, plugin]) => {
       if (!context.tailwindConfig.corePlugins.includes(name)) {
         return null
@@ -754,6 +746,7 @@ function resolvePlugins(context, root) {
   let beforeVariants = [
     variantPlugins['pseudoElementVariants'],
     variantPlugins['pseudoClassVariants'],
+    variantPlugins['hasVariants'],
     variantPlugins['ariaVariants'],
     variantPlugins['dataVariants'],
   ]
@@ -949,7 +942,11 @@ function registerPlugins(plugins, context) {
     let idx = BigInt(parasiteUtilities.length)
 
     for (const [, rule] of rules) {
-      sortedClassNames.set(rule.raws.tailwind.candidate, idx++)
+      let candidate = rule.raws.tailwind.candidate
+
+      // When multiple rules match a candidate
+      // always take the position of the first one
+      sortedClassNames.set(candidate, sortedClassNames.get(candidate) ?? idx++)
     }
 
     return classes.map((className) => {
@@ -1119,17 +1116,24 @@ function registerPlugins(plugins, context) {
           }
 
           let isArbitraryVariant = !(value in (options.values ?? {}))
+          let internalFeatures = options[INTERNAL_FEATURES] ?? {}
+
+          let respectPrefix = (() => {
+            if (isArbitraryVariant) return false
+            if (internalFeatures.respectPrefix === false) return false
+            return true
+          })()
 
           formatStrings = formatStrings.map((format) =>
             format.map((str) => ({
               format: str,
-              isArbitraryVariant,
+              respectPrefix,
             }))
           )
 
           manualFormatStrings = manualFormatStrings.map((format) => ({
             format,
-            isArbitraryVariant,
+            respectPrefix,
           }))
 
           let opts = {

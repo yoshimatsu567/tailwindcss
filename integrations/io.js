@@ -5,6 +5,9 @@ let fs = require('fs/promises')
 let chokidar = require('chokidar')
 
 let resolveToolRoot = require('./resolve-tool-root')
+let FILE_STATE = {
+  NotFound: Symbol(),
+}
 
 function getWatcherOptions() {
   return {
@@ -28,7 +31,7 @@ module.exports = function ({
   cleanup = true,
 } = {}) {
   let toolRoot = resolveToolRoot()
-  let fileCache = {}
+  let fileCache = new Map()
 
   let absoluteOutputFolder = path.resolve(toolRoot, output)
   let absoluteInputFolder = path.resolve(toolRoot, input)
@@ -41,9 +44,9 @@ module.exports = function ({
   // Restore all written files
   afterEach(async () => {
     await Promise.all(
-      Object.entries(fileCache).map(async ([file, content]) => {
+      Array.from(fileCache.entries()).map(async ([file, content]) => {
         try {
-          if (content === null) {
+          if (content === FILE_STATE.NotFound) {
             return await fs.unlink(file)
           } else {
             return await fs.writeFile(file, content, 'utf8')
@@ -89,7 +92,7 @@ module.exports = function ({
   return {
     cleanupFile(file) {
       let filePath = path.resolve(toolRoot, file)
-      fileCache[filePath] = null
+      fileCache.set(filePath, FILE_STATE.NotFound)
     },
     async fileExists(file) {
       let filePath = path.resolve(toolRoot, file)
@@ -97,10 +100,15 @@ module.exports = function ({
     },
     async removeFile(file) {
       let filePath = path.resolve(toolRoot, file)
-      if (!fileCache[filePath]) {
-        fileCache[filePath] = await fs.readFile(filePath, 'utf8')
+
+      if (!fileCache.has(filePath)) {
+        fileCache.set(
+          filePath,
+          await fs.readFile(filePath, 'utf8').catch(() => FILE_STATE.NotFound)
+        )
       }
-      await fs.unlink(filePath)
+
+      await fs.unlink(filePath).catch(() => null)
     },
     async readOutputFile(file) {
       file = await resolveFile(file, absoluteOutputFolder)
@@ -112,20 +120,31 @@ module.exports = function ({
     },
     async appendToInputFile(file, contents) {
       let filePath = path.resolve(absoluteInputFolder, file)
-      if (!fileCache[filePath]) {
-        fileCache[filePath] = await fs.readFile(filePath, 'utf8')
+      if (!fileCache.has(filePath)) {
+        fileCache.set(filePath, await fs.readFile(filePath, 'utf8'))
       }
 
       return fs.appendFile(filePath, contents, 'utf8')
     },
     async writeInputFile(file, contents) {
       let filePath = path.resolve(absoluteInputFolder, file)
-      if (!fileCache[filePath]) {
+
+      // Ensure the parent folder of the file exists
+      if (
+        !(await fs
+          .stat(filePath)
+          .then(() => true)
+          .catch(() => false))
+      ) {
+        await fs.mkdir(path.dirname(filePath), { recursive: true })
+      }
+
+      if (!fileCache.has(filePath)) {
         try {
-          fileCache[filePath] = await fs.readFile(filePath, 'utf8')
+          fileCache.set(filePath, await fs.readFile(filePath, 'utf8'))
         } catch (err) {
           if (err.code === 'ENOENT') {
-            fileCache[filePath] = null // Sentinel value to `delete` the file afterwards. This also means that we are writing to a `new` file inside the test.
+            fileCache.set(filePath, FILE_STATE.NotFound)
           } else {
             throw err
           }

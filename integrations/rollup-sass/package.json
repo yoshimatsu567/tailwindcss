@@ -11,11 +11,15 @@
     "displayName": "rollup.js",
     "setupFilesAfterEnv": [
       "<rootDir>/../../jest/customMatchers.js"
-    ]
+    ],
+    "transform": {
+      "\\.js$": "@swc/jest",
+      "\\.ts$": "@swc/jest"
+    }
   },
   "devDependencies": {
-    "rollup": "^3.15.0",
+    "rollup": "^3.26.2",
     "rollup-plugin-postcss": "^4.0.2",
-    "sass": "^1.58.3"
+    "sass": "^1.63.6"
   }
 }

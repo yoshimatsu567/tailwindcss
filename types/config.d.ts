@@ -46,12 +46,7 @@ type PrefixConfig = string
 type SeparatorConfig = string
 
 // Safelist related config
-type SafelistConfig =
-  | string[]
-  | {
-      pattern: RegExp
-      variants?: string[]
-    }[]
+type SafelistConfig = (string | { pattern: RegExp; variants?: string[] })[]
 
 // Blocklist related config
 type BlocklistConfig = string[]
@@ -65,10 +60,11 @@ type FutureConfigValues =
   | 'respectDefaultRingColorOpacity'
   | 'disableColorOpacityUtilitiesByDefault'
   | 'relativeContentPathsByDefault'
+  | 'logicalSiblingUtilities'
 type FutureConfig = Expand<'all' | Partial<Record<FutureConfigValues, boolean>>> | []
 
 // Experimental related config
-type ExperimentalConfigValues = 'optimizeUniversalDefaults' | 'matchVariant'
+type ExperimentalConfigValues = 'optimizeUniversalDefaults' | 'oxideParser'
 type ExperimentalConfig = Expand<'all' | Partial<Record<ExperimentalConfigValues, boolean>>> | []
 
 // DarkMode related config

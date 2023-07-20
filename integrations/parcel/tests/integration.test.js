@@ -1,13 +1,13 @@
 let $ = require('../../execute')
 let { css, html, javascript } = require('../../syntax')
-let { env } = require('../../../lib/lib/sharedState')
 
 let {
-  readOutputFile,
   appendToInputFile,
-  writeInputFile,
-  waitForOutputFileCreation,
+  readOutputFile,
+  removeFile,
   waitForOutputFileChange,
+  waitForOutputFileCreation,
+  writeInputFile,
 } = require('../../io')({ output: 'dist', input: 'src' })
 
 describe('static build', () => {
@@ -28,6 +28,106 @@ describe('static build', () => {
       css`
         .font-bold {
           font-weight: 700;
+        }
+      `
+    )
+  })
+
+  it('can use a tailwind.config.js configuration file with ESM syntax', async () => {
+    await removeFile('tailwind.config.js')
+    await writeInputFile(
+      'index.html',
+      html`
+        <link rel="stylesheet" href="./index.css" />
+        <div class="z-primary"></div>
+      `
+    )
+    await writeInputFile(
+      'index.css',
+      css`
+        @tailwind base;
+        @tailwind components;
+        @tailwind utilities;
+      `
+    )
+    await writeInputFile(
+      '../tailwind.config.js',
+      javascript`
+        export default {
+          content: ['./src/index.html'],
+          theme: {
+            extend: {
+              zIndex: {
+                primary: 0,
+              },
+            },
+          },
+          corePlugins: {
+            preflight: false,
+          },
+        }
+      `
+    )
+
+    await $('parcel build ./src/index.html --no-cache', {
+      env: { NODE_ENV: 'production' },
+    })
+
+    expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
+      css`
+        .z-primary {
+          z-index: 0;
+        }
+      `
+    )
+  })
+
+  it('can use a tailwind.config.ts configuration file', async () => {
+    await removeFile('tailwind.config.js')
+    await writeInputFile(
+      'index.html',
+      html`
+        <link rel="stylesheet" href="./index.css" />
+        <div class="z-primary"></div>
+      `
+    )
+    await writeInputFile(
+      'index.css',
+      css`
+        @tailwind base;
+        @tailwind components;
+        @tailwind utilities;
+      `
+    )
+    await writeInputFile(
+      '../tailwind.config.ts',
+      javascript`
+        import type { Config } from 'tailwindcss'
+
+        export default {
+          content: ['./src/index.html'],
+          theme: {
+            extend: {
+              zIndex: {
+                primary: 0,
+              },
+            },
+          },
+          corePlugins: {
+            preflight: false,
+          },
+        } satisfies Config
+      `
+    )
+
+    await $('parcel build ./src/index.html --no-cache', {
+      env: { NODE_ENV: 'production' },
+    })
+
+    expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
+      css`
+        .z-primary {
+          z-index: 0;
         }
       `
     )
@@ -72,41 +172,22 @@ describe('watcher', () => {
     )
 
     await waitForOutputFileChange(/index\.\w+\.css$/, async () => {
-      await appendToInputFile('index.html', html`<div class="bg-red-500"></div>`)
+      await appendToInputFile('index.html', html`<div class="z-0"></div>`)
     })
 
-    if (!env.OXIDE) {
-      expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
-        css`
-          .bg-red-500 {
-            --tw-bg-opacity: 1;
-            background-color: rgb(239 68 68 / var(--tw-bg-opacity));
-          }
-          .font-bold {
-            font-weight: 700;
-          }
-          .font-normal {
-            font-weight: 400;
-          }
-        `
-      )
-    }
-
-    if (env.OXIDE) {
-      expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
-        css`
-          .bg-red-500 {
-            background-color: #ef4444;
-          }
-          .font-bold {
-            font-weight: 700;
-          }
-          .font-normal {
-            font-weight: 400;
-          }
-        `
-      )
-    }
+    expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
+      css`
+        .z-0 {
+          z-index: 0;
+        }
+        .font-bold {
+          font-weight: 700;
+        }
+        .font-normal {
+          font-weight: 400;
+        }
+      `
+    )
 
     return runningProcess.stop()
   })
@@ -144,41 +225,22 @@ describe('watcher', () => {
     )
 
     await waitForOutputFileChange(/index\.\w+\.css$/, async () => {
-      await appendToInputFile('glob/index.html', html`<div class="bg-red-500"></div>`)
+      await appendToInputFile('glob/index.html', html`<div class="z-0"></div>`)
     })
 
-    if (!env.OXIDE) {
-      expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
-        css`
-          .bg-red-500 {
-            --tw-bg-opacity: 1;
-            background-color: rgb(239 68 68 / var(--tw-bg-opacity));
-          }
-          .font-bold {
-            font-weight: 700;
-          }
-          .font-normal {
-            font-weight: 400;
-          }
-        `
-      )
-    }
-
-    if (env.OXIDE) {
-      expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
-        css`
-          .bg-red-500 {
-            background-color: #ef4444;
-          }
-          .font-bold {
-            font-weight: 700;
-          }
-          .font-normal {
-            font-weight: 400;
-          }
-        `
-      )
-    }
+    expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
+      css`
+        .z-0 {
+          z-index: 0;
+        }
+        .font-bold {
+          font-weight: 700;
+        }
+        .font-normal {
+          font-weight: 400;
+        }
+      `
+    )
 
     return runningProcess.stop()
   })
@@ -201,7 +263,7 @@ describe('watcher', () => {
         .font-bold {
           font-weight: 700;
         }
-        @media (min-width: 768px) {
+        @media (width >= 768px) {
           .md\:font-medium {
             font-weight: 500;
           }
@@ -239,7 +301,7 @@ describe('watcher', () => {
         .font-bold {
           font-weight: bold;
         }
-        @media (min-width: 800px) {
+        @media (width >= 800px) {
           .md\:font-medium {
             font-weight: 500;
           }
@@ -290,11 +352,11 @@ describe('watcher', () => {
 
     expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
       css`
-        /* prettier-ignore */
         .btn {
-          border-radius: .25rem;
-          padding: .25rem .5rem;
+          border-radius: 0.25rem;
+          padding: 0.25rem 0.5rem;
         }
+
         .font-bold {
           font-weight: 700;
         }
@@ -311,43 +373,25 @@ describe('watcher', () => {
 
           @layer components {
             .btn {
-              @apply rounded bg-red-500 px-2 py-1;
+              @apply rounded z-0 px-2 py-1;
             }
           }
         `
       )
     })
 
-    if (!env.OXIDE) {
-      expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
-        css`
-          .btn {
-            --tw-bg-opacity: 1;
-            background-color: rgb(239 68 68 / var(--tw-bg-opacity));
-            border-radius: 0.25rem;
-            padding: 0.25rem 0.5rem;
-          }
-          .font-bold {
-            font-weight: 700;
-          }
-        `
-      )
-    }
-
-    if (env.OXIDE) {
-      expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
-        css`
-          .btn {
-            background-color: #ef4444;
-            border-radius: 0.25rem;
-            padding: 0.25rem 0.5rem;
-          }
-          .font-bold {
-            font-weight: 700;
-          }
-        `
-      )
-    }
+    expect(await readOutputFile(/index\.\w+\.css$/)).toIncludeCss(
+      css`
+        .btn {
+          z-index: 0;
+          border-radius: 0.25rem;
+          padding: 0.25rem 0.5rem;
+        }
+        .font-bold {
+          font-weight: 700;
+        }
+      `
+    )
 
     return runningProcess.stop()
   })

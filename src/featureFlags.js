@@ -1,28 +1,25 @@
 import colors from 'picocolors'
 import log from './util/log'
-import { env } from './lib/sharedState'
 
 let defaults = {
   optimizeUniversalDefaults: false,
-  generalizedModifiers: true,
-  get disableColorOpacityUtilitiesByDefault() {
-    return env.OXIDE
-  },
-  get relativeContentPathsByDefault() {
-    return env.OXIDE
-  },
+  disableColorOpacityUtilitiesByDefault: false,
+  relativeContentPathsByDefault: false,
+  oxideParser: true,
+  logicalSiblingUtilities: false,
 }
 
-let featureFlags = {
+export let featureFlags = {
   future: [
     'hoverOnlyWhenSupported',
     'respectDefaultRingColorOpacity',
     'disableColorOpacityUtilitiesByDefault',
     'relativeContentPathsByDefault',
+    'logicalSiblingUtilities',
   ],
   experimental: [
     'optimizeUniversalDefaults',
-    'generalizedModifiers',
+    'oxideParser',
     // 'variantGrouping',
   ],
 }

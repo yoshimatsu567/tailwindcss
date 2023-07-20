@@ -1,23 +1,74 @@
 // @ts-check
 
+import pkg from '../../../package.json'
 import path from 'path'
 import fs from 'fs'
+import postcss from 'postcss'
 import postcssrc from 'postcss-load-config'
+import browserslist from 'browserslist'
+import lightning, { Features } from 'lightningcss'
 import { lilconfig } from 'lilconfig'
 import loadPlugins from 'postcss-load-config/src/plugins' // Little bit scary, looking at private/internal API
 import loadOptions from 'postcss-load-config/src/options' // Little bit scary, looking at private/internal API
 
 import tailwind from '../../processTailwindFeatures'
-import { loadAutoprefixer, loadCssNano, loadPostcss, loadPostcssImport } from './deps'
 import { formatNodes, drainStdin, outputFile } from './utils'
 import { env } from '../../lib/sharedState'
 import resolveConfig from '../../../resolveConfig.js'
-import getModuleDependencies from '../../lib/getModuleDependencies.js'
 import { parseCandidateFiles } from '../../lib/content.js'
 import { createWatcher } from './watching.js'
 import fastGlob from 'fast-glob'
 import { findAtConfigPath } from '../../lib/findAtConfigPath.js'
 import log from '../../util/log'
+import { loadConfig } from '../../lib/load-config'
+import getModuleDependencies from '../../lib/getModuleDependencies'
+import { validateConfig } from '../../util/validateConfig'
+import { handleImportAtRules } from '../../lib/handleImportAtRules'
+import { flagEnabled } from '../../featureFlags'
+
+function license() {
+  return `/* ! tailwindcss v${pkg.version} | MIT License | https://tailwindcss.com */\n`
+}
+
+async function lightningcss(result, { map = true, minify = true } = {}) {
+  try {
+    let resolvedBrowsersListConfig = browserslist.findConfig(
+      result.opts.from ?? process.cwd()
+    )?.defaults
+    let defaultBrowsersListConfig = pkg.browserslist
+    let browsersListConfig = resolvedBrowsersListConfig ?? defaultBrowsersListConfig
+
+    let transformed = lightning.transform({
+      filename: result.opts.from || 'input.css',
+      code: Buffer.from(result.css, 'utf-8'),
+      minify,
+      sourceMap: result.map === undefined ? map : !!result.map,
+      inputSourceMap: result.map ? result.map.toString() : undefined,
+      targets: lightning.browserslistToTargets(browserslist(browsersListConfig)),
+      drafts: {
+        nesting: true,
+      },
+      include: Features.Nesting,
+      exclude: Features.LogicalProperties,
+    })
+
+    return Object.assign(result, {
+      css: transformed.code.toString('utf8'),
+      map: result.map
+        ? Object.assign(result.map, {
+            toString() {
+              return transformed.map?.toString()
+            },
+          })
+        : result.map,
+    })
+  } catch (err) {
+    console.error('Unable to use Lightning CSS. Using raw version instead.')
+    console.error(err)
+
+    return result
+  }
+}
 
 /**
  *
@@ -74,39 +125,6 @@ async function loadPostCssPlugins(customPostCssPath) {
   return [beforePlugins, afterPlugins, config.options]
 }
 
-function loadBuiltinPostcssPlugins() {
-  let postcss = loadPostcss()
-  let IMPORT_COMMENT = '__TAILWIND_RESTORE_IMPORT__: '
-  return [
-    [
-      (root) => {
-        root.walkAtRules('import', (rule) => {
-          if (rule.params.slice(1).startsWith('tailwindcss/')) {
-            rule.after(postcss.comment({ text: IMPORT_COMMENT + rule.params }))
-            rule.remove()
-          }
-        })
-      },
-      loadPostcssImport(),
-      (root) => {
-        root.walkComments((rule) => {
-          if (rule.text.startsWith(IMPORT_COMMENT)) {
-            rule.after(
-              postcss.atRule({
-                name: 'import',
-                params: rule.text.replace(IMPORT_COMMENT, ''),
-              })
-            )
-            rule.remove()
-          }
-        })
-      },
-    ],
-    [],
-    {},
-  ]
-}
-
 let state = {
   /** @type {any} */
   context: null,
@@ -117,7 +135,9 @@ let state = {
   /** @type {{content: string, extension: string}[]} */
   changedContent: [],
 
-  configDependencies: new Set(),
+  /** @type {{config: import('../../../types').Config, dependencies: Set<string>, dispose: Function } | null} */
+  configBag: null,
+
   contextDependencies: new Set(),
 
   /** @type {import('../../lib/content.js').ContentPath[]} */
@@ -142,37 +162,34 @@ let state = {
 
   loadConfig(configPath, content) {
     if (this.watcher && configPath) {
-      this.refreshConfigDependencies(configPath)
+      this.refreshConfigDependencies()
     }
 
-    let config = configPath ? require(configPath) : {}
+    let config = loadConfig(configPath)
+    let dependencies = getModuleDependencies(configPath)
+    this.configBag = {
+      config,
+      dependencies,
+      dispose() {
+        for (let file of dependencies) {
+          delete require.cache[require.resolve(file)]
+        }
+      },
+    }
 
-    // @ts-ignore
-    config = resolveConfig(config, { content: { files: [] } })
+    this.configBag.config = validateConfig(resolveConfig(this.configBag.config))
 
     // Override content files if `--content` has been passed explicitly
     if (content?.length > 0) {
-      config.content.files = content
+      this.configBag.config.content.files = content
     }
 
-    return config
+    return this.configBag.config
   },
 
-  refreshConfigDependencies(configPath) {
+  refreshConfigDependencies() {
     env.DEBUG && console.time('Module dependencies')
-
-    for (let file of this.configDependencies) {
-      delete require.cache[require.resolve(file)]
-    }
-
-    if (configPath) {
-      let deps = getModuleDependencies(configPath).map(({ file }) => file)
-
-      for (let dependency of deps) {
-        this.configDependencies.add(dependency)
-      }
-    }
-
+    this.configBag?.dispose()
     env.DEBUG && console.timeEnd('Module dependencies')
   },
 
@@ -184,7 +201,7 @@ let state = {
     let files = fastGlob.sync(this.contentPatterns.all)
 
     for (let file of files) {
-      if (env.OXIDE) {
+      if (flagEnabled(this.config, 'oxideParser')) {
         content.push({
           file,
           extension: path.extname(file).slice(1),
@@ -250,8 +267,6 @@ let state = {
 }
 
 export async function createProcessor(args, cliConfigPath) {
-  let postcss = loadPostcss()
-
   let input = args['--input']
   let output = args['--output']
   let includePostCss = args['--postcss']
@@ -259,7 +274,9 @@ export async function createProcessor(args, cliConfigPath) {
 
   let [beforePlugins, afterPlugins, postcssOptions] = includePostCss
     ? await loadPostCssPlugins(customPostCssPath)
-    : loadBuiltinPostcssPlugins()
+    : [[], [], {}]
+
+  beforePlugins.unshift(...handleImportAtRules())
 
   if (args['--purge']) {
     log.warn('purge-flag-deprecated', [
@@ -277,9 +294,9 @@ export async function createProcessor(args, cliConfigPath) {
   let tailwindPlugin = () => {
     return {
       postcssPlugin: 'tailwindcss',
-      Once(root, { result }) {
+      async Once(root, { result }) {
         env.DEBUG && console.time('Compiling CSS')
-        tailwind(({ createContext }) => {
+        await tailwind(({ createContext }) => {
           console.error()
           console.error('Rebuilding...')
 
@@ -305,8 +322,6 @@ export async function createProcessor(args, cliConfigPath) {
     tailwindPlugin,
     !args['--minify'] && formatNodes,
     ...afterPlugins,
-    !args['--no-autoprefixer'] && loadAutoprefixer(),
-    args['--minify'] && loadCssNano(),
   ].filter(Boolean)
 
   /** @type {import('postcss').Processor} */
@@ -330,9 +345,20 @@ export async function createProcessor(args, cliConfigPath) {
 
   async function build() {
     let start = process.hrtime.bigint()
+    let options = {
+      ...postcssOptions,
+      from: input,
+      to: output,
+    }
 
     return readInput()
-      .then((css) => processor.process(css, { ...postcssOptions, from: input, to: output }))
+      .then((css) => processor.process(css, options))
+      .then((result) =>
+        lightningcss(result, {
+          ...options,
+          minify: !!args['--minify'],
+        })
+      )
       .then((result) => {
         if (!state.watcher) {
           return result
@@ -355,12 +381,12 @@ export async function createProcessor(args, cliConfigPath) {
       })
       .then((result) => {
         if (!output) {
-          process.stdout.write(result.css)
+          process.stdout.write(license() + result.css)
           return
         }
 
         return Promise.all([
-          outputFile(result.opts.to, result.css),
+          outputFile(result.opts.to, license() + result.css),
           result.map && outputFile(result.opts.to + '.map', result.map.toString()),
         ])
       })
@@ -420,7 +446,7 @@ export async function createProcessor(args, cliConfigPath) {
         async rebuild(changes) {
           let needsNewContext = changes.some((change) => {
             return (
-              state.configDependencies.has(change.file) ||
+              state.configBag?.dependencies.has(change.file) ||
               state.contextDependencies.has(change.file)
             )
           })

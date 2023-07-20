@@ -12,9 +12,13 @@
     "displayName": "parcel",
     "setupFilesAfterEnv": [
       "<rootDir>/../../jest/customMatchers.js"
-    ]
+    ],
+    "transform": {
+      "\\.js$": "@swc/jest",
+      "\\.ts$": "@swc/jest"
+    }
   },
   "devDependencies": {
-    "parcel": "^2.8.3"
+    "parcel": "^2.9.3"
   }
 }

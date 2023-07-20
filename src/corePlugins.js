@@ -1,7 +1,6 @@
 import fs from 'fs'
 import * as path from 'path'
 import postcss from 'postcss'
-import { env } from './lib/sharedState'
 import createUtilityPlugin from './util/createUtilityPlugin'
 import buildMediaQuery from './util/buildMediaQuery'
 import escapeClassName from './util/escapeClassName'
@@ -11,7 +10,6 @@ import withAlphaVariable, { withAlphaValue } from './util/withAlphaVariable'
 import toColorValue from './util/toColorValue'
 import isPlainObject from './util/isPlainObject'
 import transformThemeValue from './util/transformThemeValue'
-import { version as tailwindVersion } from '../package.json'
 import log from './util/log'
 import {
   normalizeScreens,
@@ -23,6 +21,7 @@ import { formatBoxShadowValue, parseBoxShadowValue } from './util/parseBoxShadow
 import { removeAlphaVariables } from './util/removeAlphaVariables'
 import { flagEnabled } from './featureFlags'
 import { normalize } from './util/dataTypes'
+import { INTERNAL_FEATURES } from './lib/setupContextUtils'
 
 export let variantPlugins = {
   pseudoElementVariants: ({ addVariant }) => {
@@ -81,7 +80,7 @@ export let variantPlugins = {
     })
   },
 
-  pseudoClassVariants: ({ addVariant, matchVariant, config }) => {
+  pseudoClassVariants: ({ addVariant, matchVariant, config, prefix }) => {
     let pseudoVariants = [
       // Positional
       ['first', '&:first-child'],
@@ -152,12 +151,12 @@ export let variantPlugins = {
     let variants = {
       group: (_, { modifier }) =>
         modifier
-          ? [`:merge(.group\\/${escapeClassName(modifier)})`, ' &']
-          : [`:merge(.group)`, ' &'],
+          ? [`:merge(${prefix('.group')}\\/${escapeClassName(modifier)})`, ' &']
+          : [`:merge(${prefix('.group')})`, ' &'],
       peer: (_, { modifier }) =>
         modifier
-          ? [`:merge(.peer\\/${escapeClassName(modifier)})`, ' ~ &']
-          : [`:merge(.peer)`, ' ~ &'],
+          ? [`:merge(${prefix('.peer')}\\/${escapeClassName(modifier)})`, ' ~ &']
+          : [`:merge(${prefix('.peer')})`, ' ~ &'],
     }
 
     for (let [name, fn] of Object.entries(variants)) {
@@ -193,29 +192,19 @@ export let variantPlugins = {
 
           return result.slice(0, start) + a + result.slice(start + 1, end) + b + result.slice(end)
         },
-        { values: Object.fromEntries(pseudoVariants) }
+        {
+          values: Object.fromEntries(pseudoVariants),
+          [INTERNAL_FEATURES]: {
+            respectPrefix: false,
+          },
+        }
       )
     }
   },
 
   directionVariants: ({ addVariant }) => {
-    addVariant('ltr', () => {
-      log.warn('rtl-experimental', [
-        'The RTL features in Tailwind CSS are currently in preview.',
-        'Preview features are not covered by semver, and may be improved in breaking ways at any time.',
-      ])
-
-      return '[dir="ltr"] &'
-    })
-
-    addVariant('rtl', () => {
-      log.warn('rtl-experimental', [
-        'The RTL features in Tailwind CSS are currently in preview.',
-        'Preview features are not covered by semver, and may be improved in breaking ways at any time.',
-      ])
-
-      return '[dir="rtl"] &'
-    })
+    addVariant('ltr', ':is([dir="ltr"] &)')
+    addVariant('rtl', ':is([dir="rtl"] &)')
   },
 
   reducedMotionVariants: ({ addVariant }) => {
@@ -236,7 +225,7 @@ export let variantPlugins = {
     }
 
     if (mode === 'class') {
-      addVariant('dark', `${className} &`)
+      addVariant('dark', `:is(${className} &)`)
     } else if (mode === 'media') {
       addVariant('dark', '@media (prefers-color-scheme: dark)')
     }
@@ -402,6 +391,26 @@ export let variantPlugins = {
     )
   },
 
+  hasVariants: ({ matchVariant }) => {
+    matchVariant('has', (value) => `&:has(${normalize(value)})`, { values: {} })
+    matchVariant(
+      'group-has',
+      (value, { modifier }) =>
+        modifier
+          ? `:merge(.group\\/${modifier}):has(${normalize(value)}) &`
+          : `:merge(.group):has(${normalize(value)}) &`,
+      { values: {} }
+    )
+    matchVariant(
+      'peer-has',
+      (value, { modifier }) =>
+        modifier
+          ? `:merge(.peer\\/${modifier}):has(${normalize(value)}) ~ &`
+          : `:merge(.peer):has(${normalize(value)}) ~ &`,
+      { values: {} }
+    )
+  },
+
   ariaVariants: ({ matchVariant, theme }) => {
     matchVariant('aria', (value) => `&[aria-${normalize(value)}]`, { values: theme('aria') ?? {} })
     matchVariant(
@@ -492,12 +501,7 @@ export let corePlugins = {
       fs.readFileSync(path.join(__dirname, './css/preflight.css'), 'utf8')
     )
 
-    addBase([
-      postcss.comment({
-        text: `! tailwindcss v${tailwindVersion} | MIT License | https://tailwindcss.com`,
-      }),
-      ...preflightStyles.nodes,
-    ])
+    addBase(preflightStyles.nodes)
   },
 
   container: (() => {
@@ -641,7 +645,7 @@ export let corePlugins = {
   inset: createUtilityPlugin(
     'inset',
     [
-      ['inset', ['top', 'right', 'bottom', 'left']],
+      ['inset', ['inset']],
       [
         ['inset-x', ['left', 'right']],
         ['inset-y', ['top', 'bottom']],
@@ -715,6 +719,29 @@ export let corePlugins = {
     addUtilities({
       '.box-border': { 'box-sizing': 'border-box' },
       '.box-content': { 'box-sizing': 'content-box' },
+    })
+  },
+
+  lineClamp: ({ matchUtilities, addUtilities, theme }) => {
+    matchUtilities(
+      {
+        'line-clamp': (value) => ({
+          overflow: 'hidden',
+          display: '-webkit-box',
+          '-webkit-box-orient': 'vertical',
+          '-webkit-line-clamp': `${value}`,
+        }),
+      },
+      { values: theme('lineClamp') }
+    )
+
+    addUtilities({
+      '.line-clamp-none': {
+        overflow: 'visible',
+        display: 'block',
+        '-webkit-box-orient': 'horizontal',
+        '-webkit-line-clamp': 'none',
+      },
     })
   },
 
@@ -906,7 +933,7 @@ export let corePlugins = {
   },
 
   animation: ({ matchUtilities, theme, config }) => {
-    let prefixName = (name) => `${config('prefix')}${escapeClassName(name)}`
+    let prefixName = (name) => escapeClassName(config('prefix') + name)
     let keyframes = Object.fromEntries(
       Object.entries(theme('keyframes') ?? {}).map(([key, value]) => {
         return [key, { [`@keyframes ${prefixName(key)}`]: value }]
@@ -1090,8 +1117,8 @@ export let corePlugins = {
       '.list-outside': { 'list-style-position': 'outside' },
     })
   },
-
   listStyleType: createUtilityPlugin('listStyleType', [['list', ['listStyleType']]]),
+  listStyleImage: createUtilityPlugin('listStyleImage', [['list-image', ['listStyleImage']]]),
 
   appearance: ({ addUtilities }) => {
     addUtilities({
@@ -1248,13 +1275,13 @@ export let corePlugins = {
     ],
   ]),
 
-  space: ({ matchUtilities, addUtilities, theme }) => {
+  space: ({ matchUtilities, addUtilities, theme, config }) => {
     matchUtilities(
       {
         'space-x': (value) => {
           value = value === '0' ? '0px' : value
 
-          if (env.OXIDE) {
+          if (flagEnabled(config(), 'logicalSiblingUtilities')) {
             return {
               '& > :not([hidden]) ~ :not([hidden])': {
                 '--tw-space-x-reverse': '0',
@@ -1293,13 +1320,13 @@ export let corePlugins = {
     })
   },
 
-  divideWidth: ({ matchUtilities, addUtilities, theme }) => {
+  divideWidth: ({ matchUtilities, addUtilities, theme, config }) => {
     matchUtilities(
       {
         'divide-x': (value) => {
           value = value === '0' ? '0px' : value
 
-          if (env.OXIDE) {
+          if (flagEnabled(config(), 'logicalSiblingUtilities')) {
             return {
               '& > :not([hidden]) ~ :not([hidden])': {
                 '@defaults border-width': {},
@@ -1492,6 +1519,15 @@ export let corePlugins = {
       '.whitespace-pre': { 'white-space': 'pre' },
       '.whitespace-pre-line': { 'white-space': 'pre-line' },
       '.whitespace-pre-wrap': { 'white-space': 'pre-wrap' },
+      '.whitespace-break-spaces': { 'white-space': 'break-spaces' },
+    })
+  },
+
+  textWrap: ({ addUtilities }) => {
+    addUtilities({
+      '.text-wrap': { 'text-wrap': 'wrap' },
+      '.text-nowrap': { 'text-wrap': 'nowrap' },
+      '.text-balance': { 'text-wrap': 'balance' },
     })
   },
 
@@ -1741,10 +1777,21 @@ export let corePlugins = {
       return withAlphaValue(value, 0, 'rgb(255 255 255 / 0)')
     }
 
-    return function ({ matchUtilities, theme }) {
+    return function ({ matchUtilities, theme, addDefaults }) {
+      addDefaults('gradient-color-stops', {
+        '--tw-gradient-from-position': ' ',
+        '--tw-gradient-via-position': ' ',
+        '--tw-gradient-to-position': ' ',
+      })
+
       let options = {
         values: flattenColorPalette(theme('gradientColorStops')),
         type: ['color', 'any'],
+      }
+
+      let positionOptions = {
+        values: theme('gradientColorStopPositions'),
+        type: ['length', 'percentage'],
       }
 
       matchUtilities(
@@ -1753,33 +1800,74 @@ export let corePlugins = {
             let transparentToValue = transparentTo(value)
 
             return {
-              '--tw-gradient-from': toColorValue(value, 'from'),
-              '--tw-gradient-to': transparentToValue,
+              '@defaults gradient-color-stops': {},
+              '--tw-gradient-from': `${toColorValue(value)} var(--tw-gradient-from-position)`,
+              '--tw-gradient-to': `${transparentToValue} var(--tw-gradient-to-position)`,
               '--tw-gradient-stops': `var(--tw-gradient-from), var(--tw-gradient-to)`,
             }
           },
         },
         options
       )
+
+      matchUtilities(
+        {
+          from: (value) => {
+            return {
+              '--tw-gradient-from-position': value,
+            }
+          },
+        },
+        positionOptions
+      )
+
       matchUtilities(
         {
           via: (value) => {
             let transparentToValue = transparentTo(value)
 
             return {
-              '--tw-gradient-to': transparentToValue,
+              '@defaults gradient-color-stops': {},
+              '--tw-gradient-to': `${transparentToValue}  var(--tw-gradient-to-position)`,
               '--tw-gradient-stops': `var(--tw-gradient-from), ${toColorValue(
-                value,
-                'via'
-              )}, var(--tw-gradient-to)`,
+                value
+              )} var(--tw-gradient-via-position), var(--tw-gradient-to)`,
             }
           },
         },
         options
       )
+
       matchUtilities(
-        { to: (value) => ({ '--tw-gradient-to': toColorValue(value, 'to') }) },
+        {
+          via: (value) => {
+            return {
+              '--tw-gradient-via-position': value,
+            }
+          },
+        },
+        positionOptions
+      )
+
+      matchUtilities(
+        {
+          to: (value) => ({
+            '@defaults gradient-color-stops': {},
+            '--tw-gradient-to': `${toColorValue(value)} var(--tw-gradient-to-position)`,
+          }),
+        },
         options
+      )
+
+      matchUtilities(
+        {
+          to: (value) => {
+            return {
+              '--tw-gradient-to-position': value,
+            }
+          },
+        },
+        positionOptions
       )
     }
   })(),

@@ -2,9 +2,10 @@
 
 import fs from 'fs'
 import path from 'path'
+import { resolveDefaultConfigPath } from '../../util/resolveConfigPath.js'
 import { createProcessor } from './plugin.js'
 
-export async function build(args, configs) {
+export async function build(args) {
   let input = args['--input']
   let shouldWatch = args['--watch']
 
@@ -24,12 +25,12 @@ export async function build(args, configs) {
     process.exit(9)
   }
 
+  if (args['--no-autoprefixer']) {
+    console.error('[deprecation] The --no-autoprefixer flag is deprecated and has no effect.')
+  }
+
   // TODO: Reference the @config path here if exists
-  let configPath = args['--config']
-    ? args['--config']
-    : ((defaultPath) => (fs.existsSync(defaultPath) ? defaultPath : null))(
-        path.resolve(`./${configs.tailwind}`)
-      )
+  let configPath = args['--config'] ? args['--config'] : resolveDefaultConfigPath()
 
   let processor = await createProcessor(args, configPath)
 
